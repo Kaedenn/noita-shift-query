@@ -43,3 +43,10 @@ The `Actions` menu contains the following items:
 `Next Count` is the number of pending shifts to display. By default, all shifts are displayed.
 
 `Enable UI` controls the UI. If checked, the UI is drawn. If unchecked, the UI is hidden.
+
+## Planned Features
+
+Translation support. Currently the mod displays the material internal name instead of its localized name.
+
+GUI fallback if ImGui is not installed.
+
