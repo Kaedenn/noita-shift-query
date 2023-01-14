@@ -1,6 +1,11 @@
 -- Fungal Query by Kaedenn
 --
--- This mod lets you query past and pending fungal shifts _safely_.
+-- This mod lets you query past and pending fungal shifts both
+-- _accurately_ and _safely_.
+--
+-- Some existing shift predictors are ambigious about whether or not
+-- the pending shift will use your held flask. This mod is not
+-- ambiguous; if a flask is mentioned, then a flask will be used.
 --
 -- While the cheatgui mod lets you see fungal shifts, it does this by
 -- invoking the shift and checking what changed, which causes problems
@@ -39,7 +44,7 @@ function get_current_iter()
 end
 
 -- Find the numbered fungal shift. The numbers used below are taken
--- directly from the fungal_shift.lua script
+-- directly from Noita's fungal_shift.lua
 function get_abs_shift(player_entity, iter)
     q_log(string.format("get_abs_shift(player=%s, %s)",
                         tostring(player_entity), tostring(iter)))
@@ -159,6 +164,7 @@ function q_imgui_build(imgui)
         shift_messages = {}
         q_log("Calculating shifts...")
         q_find_shifts()
+        imgui.SetWindowFocus(nil)
     end
 
     imgui.SameLine()
@@ -166,6 +172,7 @@ function q_imgui_build(imgui)
         shift_messages = {}
         q_log("Calculating next shift...")
         q_find_shift(get_current_iter())
+        imgui.SetWindowFocus(nil)
     end
 
     imgui.SameLine()
@@ -178,6 +185,7 @@ function q_imgui_build(imgui)
             GamePrint("No shifts have been made")
             table.insert(shift_messages, "No shifts have been made")
         end
+        imgui.SetWindowFocus(nil)
     end
 
     -- Display the current shift index

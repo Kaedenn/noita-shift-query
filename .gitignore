@@ -1,3 +1,6 @@
+# Artifacts
+build/*.zip
+
 # Compiled Lua sources
 luac.out
 
