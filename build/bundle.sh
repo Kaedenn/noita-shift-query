@@ -104,7 +104,7 @@ fi
 debug "Bundling mod to $OFILE..."
 
 mkdir "$BUILD/$DIRNAME" || exit $?
-find "$BASE" -type f \! -wholename '*.git/*' \! -name '.*' -exec cp "{}" "$BUILD/$DIRNAME" \; || exit $?
+find "$BASE" -type f \! -wholename '*.git/*' \! -name '.*' \! -name '*.zip' -exec cp -v "{}" "$BUILD/$DIRNAME" \; || exit $?
 
 zip -r "$OFILE" "$BUILD/$DIRNAME"
 
