@@ -46,8 +46,7 @@ end
 -- Find the numbered fungal shift. The numbers used below are taken
 -- directly from Noita's fungal_shift.lua
 function get_abs_shift(player_entity, iter)
-    q_log(string.format("get_abs_shift(player=%s, %s)",
-                        tostring(player_entity), tostring(iter)))
+    q_log(("get_abs_shift(player=%s, %s)"):format(player_entity, iter))
     if not random_create then
         GamePrint("get_shift: random_create undefined")
         return SHIFT_FAIL
@@ -59,8 +58,8 @@ function get_abs_shift(player_entity, iter)
 
     mat_from.flask = false
     mat_to.flask = false
-    if random_nexti(rnd, 1, 100) <= 75 then
-        if random_nexti(rnd, 1, 100) <= 50 then
+    if random_nexti(rnd, 1, 100) <= 75 then -- 75% to use a flask
+        if random_nexti(rnd, 1, 100) <= 50 then -- 50% which side gets it
             mat_from.flask = true
         else
             mat_to.flask = true
@@ -75,6 +74,12 @@ function q_shift_str(which, source, dest)
     return ("%s shift is %s -> %s"):format(which, source, dest)
 end
 
+-- Format a shift result
+function q_format_shift(result)
+    local localize = q_setting_get("localize")
+    return format_shift_loc(result, localize)
+end
+
 -- Deduce and format the absolute-indexed shift
 function q_find_shift(shift_index)
     q_log(("q_find_shift(%s)"):format(tostring(shift_index)))
@@ -82,7 +87,7 @@ function q_find_shift(shift_index)
     local player = get_players()[1]
     local shift_result = get_abs_shift(player, shift_index)
     local next_msg = format_relative(curr_iter, shift_index)
-    for index, spair in ipairs(format_shift(shift_result)) do
+    for index, spair in ipairs(q_format_shift(shift_result)) do
         local msg = q_shift_str(next_msg, spair[1], spair[2])
         GamePrint(msg)
         table.insert(shift_messages, msg)
@@ -94,8 +99,8 @@ function q_which_shifts()
     local curr_iter = get_current_iter()
     local range_prev = math.floor(q_setting_get("previous_count"))
     local range_next = math.floor(q_setting_get("next_count"))
-    q_log(string.format("start-count = %s, end-count = %s, curr = %s",
-                        range_prev, range_next, curr_iter))
+    q_log(("start-count = %s, end-count = %s, curr = %s"):format(
+        range_prev, range_next, curr_iter))
     local idx_start = curr_iter
     local idx_end = curr_iter
     if range_prev < 0 then
@@ -103,22 +108,17 @@ function q_which_shifts()
     elseif range_prev > 0 then
         idx_start = curr_iter - range_prev
     end
-    if idx_start < 0 then
-        idx_start = 0
-    end
 
     if range_next < 0 then
         idx_end = MAX_SHIFTS
     elseif range_next > 0 then
         idx_end = curr_iter + range_next
     end
-    if idx_end > MAX_SHIFTS then
-        idx_end = MAX_SHIFTS
-    end
 
-    if idx_start > idx_end then
-        idx_start = idx_end
-    end
+    if idx_start < 0 then idx_start = 0 end
+    if idx_start > idx_end then idx_start = idx_end end
+    if idx_end > MAX_SHIFTS then idx_end = MAX_SHIFTS end
+
     q_log(("start = %s, end = %s"):format(idx_start, idx_end))
     return {first=idx_start, last=idx_end}
 end
@@ -140,8 +140,11 @@ end
 function q_imgui_build_menu(imgui)
     if imgui.BeginMenuBar() then
         if imgui.BeginMenu("Actions") then
-            local mstr = ifelse(q_logging(), "Disable", "Enable")
-            if imgui.MenuItem(mstr .. " Debugging") then
+            local localize = q_setting_get("localize")
+            if imgui.MenuItem(f_enable(not localize) .. " Translations") then
+                q_setting_set("localize", not localize)
+            end
+            if imgui.MenuItem(f_enable(not q_logging()) .. " Debugging") then
                 q_set_logging(not q_logging())
             end
             if imgui.MenuItem("Clear") then
@@ -164,18 +167,18 @@ function q_imgui_build(imgui)
         shift_messages = {}
         q_log("Calculating shifts...")
         q_find_shifts()
-        imgui.SetWindowFocus(nil)
     end
 
     imgui.SameLine()
+    -- Just display the next shift
     if imgui.Button("Get Next") then
         shift_messages = {}
         q_log("Calculating next shift...")
         q_find_shift(get_current_iter())
-        imgui.SetWindowFocus(nil)
     end
 
     imgui.SameLine()
+    -- Just display the prior shift
     if imgui.Button("Get Prior") then
         shift_messages = {}
         if curr_iter > 0 then
@@ -185,33 +188,16 @@ function q_imgui_build(imgui)
             GamePrint("No shifts have been made")
             table.insert(shift_messages, "No shifts have been made")
         end
-        imgui.SetWindowFocus(nil)
     end
 
-    -- Display the current shift index
-    imgui.Text(("Current shift iteration is %s"):format(curr_iter))
+    imgui.SameLine()
+    imgui.Text(("Shift: %s"):format(curr_iter))
 
     -- Display what shifts the user has requested
     local prev_c = math.floor(q_setting_get("previous_count"))
     local next_c = math.floor(q_setting_get("next_count"))
-    local prev_f = "%s previous shifts"
-    local next_f = "%s pending shifts"
-    local prev_text = string.format(prev_f, prev_c)
-    local next_text = string.format(next_f, next_c)
-    if prev_c < 0 then
-        prev_text = string.format(prev_f, "all")
-    elseif prev_c == 0 then
-        prev_text = string.format(prev_f, "zero")
-    elseif prev_c == 1 then
-        prev_text = "one previous shift"
-    end
-    if next_c < 0 then
-        next_text = string.format(next_f, "all")
-    elseif next_c == 0 then
-        next_text = string.format(next_f, "zero")
-    elseif next_c == 1 then
-        prev_text = "one pending shift"
-    end
+    local next_text = f_shift_count(next_c, "pending")
+    local prev_text = f_shift_count(prev_c, "previous")
     imgui.Text(("Displaying %s and %s"):format(prev_text, next_text))
 
     -- Display all messages
@@ -229,7 +215,7 @@ local imgui = load_imgui({version="1.1.0", mod="FungalShiftQuery"})
 
 -- The actual driving code, executed once per frame after world update
 function OnWorldPostUpdate()
-    local window_flags = imgui.WindowFlags.NoFocusOnAppearing + imgui.WindowFlags.MenuBar
+    local window_flags = imgui.WindowFlags.NoFocusOnAppearing + imgui.WindowFlags.MenuBar + imgui.WindowFlags.NoNavInputs
     if q_get_enabled() then
         if imgui.Begin("Fungal Shifts", nil, window_flags) then
             q_imgui_build_menu(imgui)

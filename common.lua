@@ -25,10 +25,29 @@ function ifelse(cond, trueval, falseval)
     return falseval
 end
 
--- Print a message to both the game and to the console.
+-- Returns either "Enable" or "Disable" based on the condition
+function f_enable(cond)
+    if cond then return "Enable" end
+    return "Disable"
+end
+
+-- Print a message to both the game and to the console
 function q_print(msg)
     GamePrint(msg)
     print(msg)
+end
+
+-- Format a "<nu> pending/previous shift(s)" message
+function f_shift_count(num, label)
+    local prefix = tostring(num)
+    local suffix = "shifts"
+    if num < 0 then prefix = "all"
+    elseif num == 0 then prefix = "zero"
+    elseif num == 1 then
+        prefix = "one"
+        suffix = "shift"
+    end
+    return ("%s %s %s"):format(prefix, label, suffix)
 end
 
 -- Returns true if logging is enabled, false otherwise.
@@ -78,22 +97,37 @@ function q_disable_gui()
     q_setting_set("enable", false)
 end
 
+-- Localize a material, either "name" or "$mat_name".
+function localize_material(material)
+    local matid = CellFactory_GetType(material)
+    local mname = material
+    if matid ~= -1 then
+        mname = CellFactory_GetUIName(matid)
+    end
+    local name = GameTextGetTranslatedOrNot(mname)
+    if not name then -- handle nil
+        return ""
+    end
+    return name
+end
+
 -- Format a material with the possibility of including a flask.
 -- Localizes the material if l10n is true.
 function flask_or_loc(material, use_flask, l10n)
     local logging = q_logging()
     local mname = material
     if l10n then
-        mname = CellFactory_GetUIName(material)
-        if logging and mname ~= material then
+        mname = localize_material(material)
+        if mname == "" then
+            mname = ("[%s]"):format(material)
+        elseif logging and mname ~= material then
             mname = ("%s [%s]"):format(mname, material)
         end
     end
-    if not mname or mname == "" then mname = material end
     if use_flask then
-        return ("flask or %s"):format(material)
+        return ("flask or %s"):format(mname)
     elseif logging then
-        return ("%s (no flask)"):format(material)
+        return ("%s (no flask)"):format(mname)
     end
     return mname
 end

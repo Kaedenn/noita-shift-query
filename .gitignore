@@ -1,3 +1,7 @@
+# Temporary files
+.*.swp
+.*.swo
+
 # Artifacts
 build/*.zip
 

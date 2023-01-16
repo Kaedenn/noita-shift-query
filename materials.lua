@@ -1,5 +1,9 @@
 -- Fungal Query materials
 
+-- The tables below are taken directly from Noita's own fungal_shift.lua
+-- script, with some formatting for good measure. Note that changes to
+-- Noita's fungal_shift.lua will not be reflected here! Therefore, this
+-- mod does *not* support alterations to fungal shift logic or materials.
 MATERIALS_FROM = {
     { probability = 1.0,
       materials = { "water", "water_static", "water_salt", "water_ice" },
@@ -84,17 +88,18 @@ MATERIALS_TO = {
 }
 
 function add_source_material(materials, probability, name)
-  local entry = {
-    probability = probability,
-    materials = materials
-  }
-  if name ~= nil then
-    entry.name_material = name
-  end
-  table.insert(MATERIALS_FROM, entry)
+    local entry = {
+        probability = probability,
+        materials = materials
+    }
+    if name ~= nil then
+        entry.name_material = name
+    end
+    table.insert(MATERIALS_FROM, entry)
 end
 
 function add_target_material(material, probability)
-  table.insert(MATERIALS_TO, {material=material, probability=probability})
+    table.insert(MATERIALS_TO, {material=material, probability=probability})
 end
 
+-- vim: set ts=4 sts=4 sw=4:

@@ -49,6 +49,13 @@ mod_settings = {
         scope = MOD_SETTING_SCOPE_RUNTIME,
     },
     {
+        id = "localize",
+        ui_name = "Translate?",
+        ui_description = "Should we display the material's translated name instead of their internal name?",
+        ui_default = true,
+        scope = MOD_SETTING_SCOPE_RUNTIME,
+    },
+    {
         id = "enable",
         ui_name = "Enable UI",
         ui_description = "Display GUI",
