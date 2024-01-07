@@ -24,7 +24,7 @@ function mod_setting_changed_callback(mod_id, gui, in_main_menu, setting, old_va
 end
 
 local mod_id = "shift_query"
-mod_settings_version = 2
+mod_settings_version = 3
 mod_settings = {
     {
         id = "previous_count",
@@ -51,8 +51,13 @@ mod_settings = {
     {
         id = "localize",
         ui_name = "Translate?",
-        ui_description = "Should we display the material's translated name instead of their internal name?",
-        ui_default = true,
+        ui_description = "How should material names be displayed?",
+        value_default = "localname",
+        values = {
+            {"locale", "Localized Name"},
+            {"internal", "Internal Name"},
+            {"both", "Both"}
+        },
         scope = MOD_SETTING_SCOPE_RUNTIME,
     },
     {
@@ -60,6 +65,13 @@ mod_settings = {
         ui_name = "Enable UI",
         ui_description = "Display GUI",
         value_default = true,
+        scope = MOD_SETTING_SCOPE_RUNTIME,
+    },
+    {
+        id = "override_ui",
+        ui_name = "Enable Override UI",
+        ui_description = "Enable use of the manual shifting UI",
+        value_default = false,
         scope = MOD_SETTING_SCOPE_RUNTIME,
     },
 }

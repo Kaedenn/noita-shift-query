@@ -25,10 +25,21 @@ function ifelse(cond, trueval, falseval)
     return falseval
 end
 
--- Returns either "Enable" or "Disable" based on the condition
+-- Return either "Enable" or "Disable" based on the condition
 function f_enable(cond)
     if cond then return "Enable" end
     return "Disable"
+end
+
+-- Return the first non-false value of a function over a table of values
+function first_result(func, values)
+    for _, value in ipairs(values) do
+        local result = func(value)
+        if result then
+            return result, value
+        end
+    end
+    return nil, nil
 end
 
 -- Print a message to both the game and to the console
@@ -69,7 +80,14 @@ end
 -- Display a logging message if logging is enabled.
 function q_log(msg)
     if q_logging() then
-        return q_print("DEBUG: " .. msg)
+        q_print("DEBUG: " .. msg)
+    end
+end
+
+-- Display a formatted logging message if logging is enabled.
+function q_logf(msg, ...)
+    if q_logging() then
+        q_log(msg:format(...))
     end
 end
 
@@ -190,6 +208,31 @@ function format_relative(curr, index)
         term = ("%s[i=%s]"):format(term, index)
     end
     return term
+end
+
+-- Format a duration of time
+function format_duration(nsecs)
+    local total = math.abs(nsecs)
+    local hours = math.floor(total / 60 / 60)
+    local minutes = math.floor(total / 60) % 60
+    local seconds = math.floor(total) % 60
+    local parts = {}
+    if hours ~= 0 then
+        table.insert(parts, ("%dh"):format(hours))
+    end
+    if minutes ~= 0 then
+        table.insert(parts, ("%dm"):format(minutes))
+    end
+    if seconds ~= 0 then
+        table.insert(parts, ("%ds"):format(seconds))
+    end
+    if #parts == 0 then
+        return "0s"
+    end
+    if nsecs < 0 then
+        return "-" .. table.concat(parts)
+    end
+    return table.concat(parts)
 end
 
 -- vim: set ts=4 sts=4 sw=4:
