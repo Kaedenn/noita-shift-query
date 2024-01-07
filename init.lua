@@ -31,7 +31,6 @@ dofile("mods/shift_query/common.lua")
 dofile("mods/shift_query/materials.lua")
 dofile("mods/shift_query/query.lua")
 dofile("mods/shift_query/lib/feedback.lua")
-dofile("mods/shift_query/l10n.lua")
 APLC = dofile_once("mods/shift_query/aplc.lua")
 
 MAT_AP = "midas_precursor"
