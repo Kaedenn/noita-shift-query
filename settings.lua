@@ -21,6 +21,11 @@ MAX_SHIFTS = 20     -- the game implicitly supports only 20 shifts
 -- ModSettingSet(setting_id, new_value)
 
 function mod_setting_changed_callback(mod_id, gui, in_main_menu, setting, old_value, new_value)
+    if setting == "previous_count" or setting == "next_count" then
+        if new_value < MIN_SHIFTS then
+            GamePrint(("setting %s %s outside range"):format(setting, tostring(new_value)))
+        end
+    end
 end
 
 local mod_id = "shift_query"
@@ -29,30 +34,30 @@ mod_settings = {
     {
         id = "previous_count",
         ui_name = "Previous count",
-        ui_description = "How many previous shifts should we display (-1 = all)?",
+        ui_description = "How many previous shifts should we display? (-1 = all)",
         value_default = 0,
         value_min = MIN_SHIFTS,
         value_max = MAX_SHIFTS,
         value_display_multiplier = 1,
-        --change_fn = mod_setting_changed_callback,
+        change_fn = mod_setting_changed_callback,
         scope = MOD_SETTING_SCOPE_RUNTIME,
     },
     {
         id = "next_count",
         ui_name = "Next count",
-        ui_description = "How many pending shifts should we display (-1 = all)?",
+        ui_description = "How many pending shifts should we display? (-1 = all)",
         value_default = -1,
         value_min = MIN_SHIFTS,
         value_max = MAX_SHIFTS,
         value_display_multiplier = 1,
-        --change_fn = mod_setting_changed_callback,
+        change_fn = mod_setting_changed_callback,
         scope = MOD_SETTING_SCOPE_RUNTIME,
     },
     {
         id = "localize",
         ui_name = "Translate?",
         ui_description = "How should material names be displayed?",
-        value_default = "localname",
+        value_default = "locale",
         values = {
             {"locale", "Localized Name"},
             {"internal", "Internal Name"},
@@ -67,10 +72,17 @@ mod_settings = {
         value_default = true,
         scope = MOD_SETTING_SCOPE_RUNTIME,
     },
-    {
+    --[[{
         id = "override_ui",
         ui_name = "Enable Override UI",
         ui_description = "Enable use of the manual shifting UI",
+        value_default = false,
+        scope = MOD_SETTING_SCOPE_RUNTIME,
+    },]]
+    {
+        id = "include_aplc",
+        ui_name = "Include AP / LC recipes",
+        ui_description = "Include Alchemic Precursor and Lively Concoction recipes",
         value_default = false,
         scope = MOD_SETTING_SCOPE_RUNTIME,
     },

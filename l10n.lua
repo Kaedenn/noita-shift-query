@@ -1,7 +1,7 @@
 --[[
 -- Locali(s,z)ation support logic and functions
 --]]
-dofile("mods/kae_test/common.lua")
+--[[dofile("mods/kae_test/common.lua")]]
 dofile_once("data/scripts/lib/utilities.lua")
 
 L10N = {

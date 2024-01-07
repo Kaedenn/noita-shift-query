@@ -129,36 +129,35 @@ function localize_material(material)
     return name
 end
 
--- Format a material with the possibility of including a flask.
--- Localizes the material if l10n is true.
-function flask_or_loc(material, use_flask, l10n)
-    local logging = q_logging()
-    local mname = material
-    if l10n then
-        mname = localize_material(material)
-        if mname == "" then
-            mname = ("[%s]"):format(material)
-        elseif logging and mname ~= material then
-            mname = ("%s [%s]"):format(mname, material)
-        end
+-- Possibly localize a material based on q_logging, localize setting
+function maybe_localize_material(material)
+    local result = localize_material(material)
+    local loc_mode = q_setting_get("localize")
+    if result == "" or result == nil then
+        result = ("[%s]"):format(material)
+    elseif loc_mode == "internal" then
+        result = material
+    elseif loc_mode == "both" then
+        result = ("%s [%s]"):format(localize_material(material), material)
     end
+    return result
+end
+
+-- Format a material with the possibility of including a flask.
+function flask_or(material, use_flask)
+    local logging = q_logging()
+    local mname = maybe_localize_material(material)
     if use_flask then
         return ("flask or %s"):format(mname)
-    elseif logging then
+    end
+    if logging then
         return ("%s (no flask)"):format(mname)
     end
     return mname
 end
 
--- Format a material with the possibility of including a flask.
--- Localizes the material.
-function flask_or(material, use_flask)
-    return flask_or_loc(material, use_flask, true)
-end
-
 -- Format a fungal shift. Returns a table of pairs of strings.
--- Localizes the materials if l10n is true.
-function format_shift_loc(shift, l10n)
+function format_shift(shift)
     if not shift then return {{"invalid shift", "invalid shift"}} end
     local source = shift.from
     local target = shift.to
@@ -173,23 +172,18 @@ function format_shift_loc(shift, l10n)
         end
         return {s_source, s_target}
     end
-    local s_target = flask_or_loc(target.material, target.flask, l10n)
+    local s_target = flask_or(target.material, target.flask)
     local material_pairs = {}
     if source.name_material then
-        local s_source = flask_or_loc(source.name_material, source.flask, l10n)
+        local s_source = flask_or(source.name_material, source.flask)
         table.insert(material_pairs, {s_source, s_target})
     else
         for index, material in ipairs(source.materials) do
-            local s_source = flask_or_loc(material, source.flask, l10n)
+            local s_source = flask_or(material, source.flask)
             table.insert(material_pairs, {s_source, s_target})
         end
     end
     return material_pairs
-end
-
--- Invokes format_shift_loc with localization enabled.
-function format_shift(shift)
-    return format_shift_loc(shift, true)
 end
 
 -- Format a number relative to its current value

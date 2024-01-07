@@ -32,6 +32,10 @@ dofile("mods/shift_query/materials.lua")
 dofile("mods/shift_query/query.lua")
 dofile("mods/shift_query/lib/feedback.lua")
 dofile("mods/shift_query/l10n.lua")
+APLC = dofile_once("mods/shift_query/aplc.lua")
+
+MAT_AP = "midas_precursor"
+MAT_LC = "magic_liquid_hp_regeneration_unstable"
 
 SQ = {
     new = function(self, imgui)
@@ -39,7 +43,8 @@ SQ = {
         self._fb = Feedback:init(imgui)
         self._iter_track = -1   -- used for update detection
         self._frame_track = -1  -- used for update detection
-        self._override_ui = false -- display the override shift menu?
+        self._force_update = false
+        self._override_ui = false   -- display the override shift menu?
         self._ovui_mat_source = "water"
         self._ovui_mat_target = "water_swamp"
         return self
@@ -69,12 +74,6 @@ SQ = {
         return {first=idx_start, last=idx_end}
     end,
 
-    --[[ Format a shift result ]]
-    format_shift = function(self, shift)
-        local localize = q_setting_get("localize")
-        return format_shift_loc(shift, localize)
-    end,
-
     --[[ Format the final shift line ]]
     format_final = function(self, which, source, dest)
         return ("%s shift is %s -> %s"):format(which, source, dest)
@@ -86,7 +85,7 @@ SQ = {
         local iter = get_curr_iter()
         local shift = sq_get_abs(index)
         local which_msg = format_relative(iter, index)
-        for _, pair in ipairs(self:format_shift(shift)) do
+        for _, pair in ipairs(format_shift(shift)) do
             local line = self:format_final(which_msg, pair[1], pair[2])
             q_log(line)
             self._fb:add(line)
@@ -95,6 +94,9 @@ SQ = {
 
     --[[ Determine and format all selected shifts ]]
     query_all = function(self)
+        if q_setting_get("include_aplc") then
+            self:query_aplc()
+        end
         local bounds = self:get_range()
         q_logf("Querying shifts %s to %s", bounds.first, bounds.last)
         local iter = bounds.first
@@ -105,8 +107,37 @@ SQ = {
         end
     end,
 
+    --[[ Determine the AP / LC recipes ]]
+    query_aplc = function(self)
+        if not APLC then
+            self._fb:add("APLC API not available; sorry")
+            return
+        end
+        local lc_combo, ap_combo, lc_prob, ap_prob = APLC.get_recipe()
+        if not lc_combo or not ap_combo then
+            self._fb:add("Failed to determine AP/LC recipes")
+            return
+        end
+        local ap_mat = maybe_localize_material(MAT_AP)
+        self._fb:add(("%s is (%.2f%% success rate)"):format(ap_mat, ap_prob))
+        self._fb:add(("  %s, %s, %s"):format(
+            maybe_localize_material(ap_combo[1]),
+            maybe_localize_material(ap_combo[2]),
+            maybe_localize_material(ap_combo[3])))
+        local lc_mat = maybe_localize_material(MAT_LC)
+        self._fb:add(("%s is (%.2f%% success rate)"):format(lc_mat, lc_prob))
+        self._fb:add(("  %s, %s, %s"):format(
+            maybe_localize_material(lc_combo[1]),
+            maybe_localize_material(lc_combo[2]),
+            maybe_localize_material(lc_combo[3])))
+    end,
+
     --[[ Determine if we should refresh the shift list ]]
     check_update = function(self)
+        if self._force_update then
+            self._force_update = false
+            return true
+        end
         local iter = get_curr_iter()
         local frame = get_last_shift_frame()
         local draw = false
@@ -127,12 +158,19 @@ SQ = {
     draw_menu = function(self)
         if self._imgui.BeginMenuBar() then
             if self._imgui.BeginMenu("Actions") then
-                local localize = q_setting_get("localize")
-                local loc_str = f_enable(not localize)
-                if self._imgui.MenuItem(loc_str .. " Translations") then
-                    q_setting_set("localize", not localize)
-                    self._iter_track = -1   -- force a refresh
+                if self._imgui.MenuItem("Show Translations") then
+                    q_setting_set("localize", "locale")
+                    self._force_update = true
                 end
+                if self._imgui.MenuItem("Show Internal Names") then
+                    q_setting_set("localize", "internal")
+                    self._force_update = true
+                end
+                if self._imgui.MenuItem("Show Both") then
+                    q_setting_set("localize", "both")
+                    self._force_update = true
+                end
+
                 local log_str = f_enable(not q_logging())
                 if self._imgui.MenuItem(log_str .. " Debugging") then
                     q_set_logging(not q_logging())
@@ -244,8 +282,14 @@ imgui = nil
 query = nil
 
 function OnModPostInit()
-    imgui = load_imgui({version="1.2.0", mod="FungalShiftQuery"})
+    imgui = load_imgui({version="1.3.0", mod="FungalShiftQuery"})
     query = SQ:new(imgui)
+
+    -- Fix problem with contradicting localize options (boolean / string)
+    local localize = q_setting_get("localize")
+    if localize ~= "locale" and localize ~= "internal" and localize ~= "both" then
+        q_setting_set("localize", "locale")
+    end
 end
 
 -- The actual driving code, executed once per frame after world update
