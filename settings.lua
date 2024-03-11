@@ -12,9 +12,9 @@
 
 dofile("data/scripts/lib/utilities.lua")
 dofile("data/scripts/lib/mod_settings.lua")
+dofile_once("mods/shift_query/constants.lua")
 
-MIN_SHIFTS = -1     -- values < 0 mean "all"
-MAX_SHIFTS = 20     -- the game implicitly supports only 20 shifts
+-- luacheck: globals MOD_SETTING_SCOPE_RUNTIME
 
 -- Available functions:
 -- ModSettingSetNextValue(setting_id, next_value, true/false)
@@ -28,7 +28,6 @@ function mod_setting_changed_callback(mod_id, gui, in_main_menu, setting, old_va
     end
 end
 
-local mod_id = "shift_query"
 mod_settings_version = 3
 mod_settings = {
     {
@@ -59,9 +58,9 @@ mod_settings = {
         ui_description = "How should material names be displayed?",
         value_default = "locale",
         values = {
-            {"locale", "Localized Name"},
-            {"internal", "Internal Name"},
-            {"both", "Both"}
+            {FORMAT_LOCALE, "Localized Name"},
+            {FORMAT_INTERAL, "Internal Name"},
+            {FORMAT_BOTH, "Both"}
         },
         scope = MOD_SETTING_SCOPE_RUNTIME,
     },
@@ -89,16 +88,19 @@ mod_settings = {
 }
 
 function ModSettingsUpdate(init_scope)
-    local old_version = mod_settings_get_version(mod_id)
-    mod_settings_update(mod_id, mod_settings, init_scope)
+    -- luacheck: globals mod_settings_get_version mod_settings_update
+    local old_version = mod_settings_get_version(MOD_ID)
+    mod_settings_update(MOD_ID, mod_settings, init_scope)
 end
 
 function ModSettingsGuiCount()
-    return mod_settings_gui_count(mod_id, mod_settings)
+    -- luacheck: globals mod_settings_gui_count
+    return mod_settings_gui_count(MOD_ID, mod_settings)
 end
 
 function ModSettingsGui(gui, in_main_menu)
-    mod_settings_gui(mod_id, mod_settings, gui, in_main_menu)
+    -- luacheck: globals mod_settings_gui
+    mod_settings_gui(MOD_ID, mod_settings, gui, in_main_menu)
 end
 
 -- vim: set ts=4 sts=4 sw=4:

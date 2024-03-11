@@ -1,5 +1,29 @@
---[[ Determine the current Alchemic Precursor / Lively Concoction recipes. ]]
+--[[
+-- Determine the current Alchemic Precursor / Lively Concoction recipes.
+--
+-- Note that this depends on the game's material tables matching the
+-- material tables below. If either of those change, this file will no
+-- longer give correct results.
+--
+-- Unfortunately, and unlike the fungal shift material tables, Noita
+-- does not expose the material tables in any accessible way. Therefore,
+-- the materials must be specified here.
+--]]
 
+--[[ Example use:
+--  local APLC = dofile("mods/shift_query/aplc.lua")
+--  function get_aplc_data()
+--      local lc_combo, ap_combo, lc_prob, ap_prob = APLC.get_recipe()
+--      local ap_str = ("AP: %s, %s, %s (%.02f%%)"):format(
+--          ap_combo[1], ap_combo[2], ap_combo[3], ap_prob)
+--      local lc_str = ("LC: %s, %s, %s (%.02f%%)"):format(
+--          lc_combo[1], lc_combo[2], lc_combo[3], lc_prob)
+--      GamePrint(ap_str)
+--      GamePrint(lc_str)
+--  end
+--]]
+
+--[[ Flask contents. Order is important!! ]]
 local LIQUIDS = {
     "acid",
     "alcohol",
@@ -33,6 +57,7 @@ local LIQUIDS = {
     "magic_liquid_random_polymorph"
 }
 
+--[[ Pouch contents. Order is important!! ]]
 local ORGANICS = {
     "bone",
     "brass",
@@ -54,6 +79,7 @@ local ORGANICS = {
     "honey"
 }
 
+--[[ Advance the RNG iteration state ]]
 function rand_advance(rvalue)
     local high = math.floor(rvalue / 127773.0)
     local low = rvalue % 127773
@@ -64,6 +90,7 @@ function rand_advance(rvalue)
     return rvalue
 end
 
+--[[ Shuffle a sequence in-place ]]
 function shuffle(sequence, seed)
     local val = math.floor(seed / 2) + 0x30f6
     val = rand_advance(val)
@@ -75,6 +102,7 @@ function shuffle(sequence, seed)
     end
 end
 
+--[[ Get a copy of the LIQUIDS table ]]
 function get_liquids()
     local liquids = {}
     for idx, mat in ipairs(LIQUIDS) do
@@ -83,6 +111,7 @@ function get_liquids()
     return liquids
 end
 
+--[[ Get a copy of the ORGANICS table ]]
 function get_organics()
     local organics = {}
     for idx, mat in ipairs(ORGANICS) do
@@ -91,6 +120,7 @@ function get_organics()
     return organics
 end
 
+--[[ Pick the next material according to the RNG ]]
 function aplc_random_pick(rstate, materials)
     for _ = 1, 1000 do
         rstate = rand_advance(rstate)
@@ -102,8 +132,10 @@ function aplc_random_pick(rstate, materials)
             return rstate, selection
         end
     end
+    error("Failed to pick AP/LC; broken material table?")
 end
 
+--[[ Get either the AP or LC recipe and probability ]]
 function aplc_random_set(rstate, seed)
     local liquids = get_liquids()
     local organics = get_organics()
@@ -122,14 +154,14 @@ function aplc_random_set(rstate, seed)
     return rstate, {combo[1], combo[2], combo[3]}, prob
 end
 
+--[[ Get the AP / LC materials and probabilities ]]
 function aplc_get()
+    -- Set the random number generator to a specific state
     local seed = tonumber(StatsGetValue("world_seed"))
     local rstate = math.floor(seed * 0.17127000 + 1323.59030000)
+    for i = 1, 6 do rstate = rand_advance(rstate) end
 
-    for i = 1, 6 do
-        rstate = rand_advance(rstate)
-    end
-
+    -- Determine first the LC information, then the AP information
     local lc_combo, lc_prob
     local ap_combo, ap_prob
     rstate, lc_combo, lc_prob = aplc_random_set(rstate, seed)

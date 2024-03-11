@@ -11,35 +11,15 @@
 -- the "(no flask)" designation, as it's redundant.
 
 dofile_once("data/scripts/lib/utilities.lua")
+dofile_once("mods/shift_query/constants.lua")
 
-K_MOD_ID = "shift_query"
-K_CONFIG_LOG_ENABLE = K_MOD_ID .. "." .. "q_logging"
-K_ON = "1"
-K_OFF = "0"
-
--- Return the first value if the condition is true, the second otherwise
-function ifelse(cond, trueval, falseval)
-    if cond then
-        return trueval
-    end
-    return falseval
-end
+MOD_ID = "shift_query"
+K_CONFIG_LOG_ENABLE = MOD_ID .. "." .. "q_logging"
 
 -- Return either "Enable" or "Disable" based on the condition
 function f_enable(cond)
     if cond then return "Enable" end
     return "Disable"
-end
-
--- Return the first non-false value of a function over a table of values
-function first_result(func, values)
-    for _, value in ipairs(values) do
-        local result = func(value)
-        if result then
-            return result, value
-        end
-    end
-    return nil, nil
 end
 
 -- Print a message to both the game and to the console
@@ -63,17 +43,17 @@ end
 
 -- Returns true if logging is enabled, false otherwise.
 function q_logging()
-    return GlobalsGetValue(K_CONFIG_LOG_ENABLE, K_OFF) ~= K_OFF
+    return GlobalsGetValue(K_CONFIG_LOG_ENABLE, FLAG_OFF) ~= FLAG_OFF
 end
 
 -- Enable or disable logging
 function q_set_logging(enable)
     if enable then
-        GlobalsSetValue(K_CONFIG_LOG_ENABLE, K_ON)
+        GlobalsSetValue(K_CONFIG_LOG_ENABLE, FLAG_ON)
         q_log("Debugging is now enabled")
     else
         q_log("Disabling debugging")
-        GlobalsSetValue(K_CONFIG_LOG_ENABLE, K_OFF)
+        GlobalsSetValue(K_CONFIG_LOG_ENABLE, FLAG_OFF)
     end
 end
 
@@ -91,19 +71,47 @@ function q_logf(msg, ...)
     end
 end
 
--- Get a configuration setting
+--[[ Configuration
+-- Cache is necessary because it takes more than one update cycle before
+-- configuration updates are finalized. After calling
+-- ModSettingSetNextValue, the next several calls to ModSettingGet will
+-- return the prior value for the next couple update cycles.
+--
+-- The cache allows for these values to appear instantly. Cache entries
+-- are stored when setting a value and cleared once that value is
+-- properly stored.
+--]]
+local config_cache = {}
+
+--[[ Get the value for a particular setting ]]
 function q_setting_get(setting)
-    return ModSettingGet(K_MOD_ID .. "." .. setting)
+    local value = ModSettingGet(MOD_ID .. "." .. setting)
+    if config_cache[setting] ~= nil then
+        local entry = config_cache[setting]
+        if entry.old_value == value then
+            return entry.new_value
+        end
+        if value == entry.new_value then
+            config_cache[setting] = nil
+            return value
+        end
+    end
+    return value
 end
 
--- Set a configuration setting
+--[[ Set the value for a particular setting ]]
 function q_setting_set(setting, value)
-    ModSettingSetNextValue(K_MOD_ID .. "." .. setting, value, false)
+    local old_value = ModSettingGet(MOD_ID .. "." .. setting)
+    config_cache[setting] = {
+        old_value = old_value,
+        new_value = value
+    }
+    ModSettingSetNextValue(MOD_ID .. "." .. setting, value, false)
 end
 
 -- Get the "enable gui?" setting's value
 function q_get_enabled()
-    local value = q_setting_get("enable")
+    local value = q_setting_get(SETTING_ENABLE)
     if value then
         return true
     end
@@ -112,7 +120,7 @@ end
 
 -- Disable the GUI
 function q_disable_gui()
-    q_setting_set("enable", false)
+    q_setting_set(SETTING_ENABLE, false)
 end
 
 -- Localize a material, either "name" or "$mat_name".
@@ -129,18 +137,32 @@ function localize_material(material)
     return name
 end
 
+-- Localize a material based on the mode argument
+function localize_material_via(material, loc_mode)
+    if loc_mode == FORMAT_INTERNAL then
+        return material
+    end
+
+    local local_name = localize_material(material)
+    if local_name == "" or local_name == material then
+        return material
+    end
+
+    if loc_mode == FORMAT_LOCALE then
+        return local_name
+    end
+
+    if loc_mode == FORMAT_BOTH then
+        return ("%s [%s]"):format(local_name, material)
+    end
+
+    return ("[%s]"):format(material)
+end
+
 -- Possibly localize a material based on q_logging, localize setting
 function maybe_localize_material(material)
-    local result = localize_material(material)
-    local loc_mode = q_setting_get("localize")
-    if result == "" or result == nil then
-        result = ("[%s]"):format(material)
-    elseif loc_mode == "internal" then
-        result = material
-    elseif loc_mode == "both" then
-        result = ("%s [%s]"):format(localize_material(material), material)
-    end
-    return result
+    local loc_mode = q_setting_get(SETTING_LOCALIZE)
+    return localize_material_via(material, loc_mode)
 end
 
 -- Format a material with the possibility of including a flask.

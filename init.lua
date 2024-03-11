@@ -23,14 +23,12 @@
 -- messages if ImGui isn't available.
 --
 -- Add "fungal_shift_ui_icon" to the ImGui window.
---
--- Proper internationalization support: custom language definitions for
--- SQ.format_final, the buttons, menus, etc.
 
-dofile("mods/shift_query/common.lua")
-dofile("mods/shift_query/materials.lua")
-dofile("mods/shift_query/query.lua")
-dofile("mods/shift_query/lib/feedback.lua")
+dofile_once("mods/shift_query/common.lua")
+dofile_once("mods/shift_query/materials.lua")
+dofile_once("mods/shift_query/query.lua")
+dofile_once("mods/shift_query/lib/feedback.lua")
+dofile_once("mods/shift_query/constants.lua")
 APLC = dofile_once("mods/shift_query/aplc.lua")
 
 MAT_AP = "midas_precursor"
@@ -43,18 +41,22 @@ SQ = {
         self._iter_track = -1   -- used for update detection
         self._frame_track = -1  -- used for update detection
         self._force_update = false
-        self._override_ui = false   -- display the override shift menu?
-        self._ovui_mat_source = "water"
-        self._ovui_mat_target = "water_swamp"
         return self
+    end,
+
+    --[[ Refresh and re-query everything ]]
+    refresh = function(self)
+        self._fb:clear()
+        q_log("Calculating shifts...")
+        self:query_all()
     end,
 
     --[[ Deduce {first_shift_index, last_shift_index} range ]]
     get_range = function(self)
         local curr_iter = get_curr_iter()
-        local range_prev = math.floor(q_setting_get("previous_count"))
-        local range_next = math.floor(q_setting_get("next_count"))
-        q_logf("pcount=%s, ncount=%s, curr=%s", range_prev, range_next, iter)
+        local range_prev = math.floor(q_setting_get(SETTING_PREVIOUS))
+        local range_next = math.floor(q_setting_get(SETTING_NEXT))
+        q_logf("pcount=%s, ncount=%s, curr=%s", range_prev, range_next, curr_iter)
         local idx_start = curr_iter
         local idx_end = curr_iter
         if range_prev < 0 then
@@ -78,6 +80,24 @@ SQ = {
         return ("%s shift is %s -> %s"):format(which, source, dest)
     end,
 
+    --[[ Display either an AP or an LC recipe ]]
+    print_aplc = function(self, mat, prob, combo)
+        local result = maybe_localize_material(mat)
+        local mat1 = maybe_localize_material(combo[1])
+        local mat2 = maybe_localize_material(combo[2])
+        local mat3 = maybe_localize_material(combo[3])
+        self._fb:addf("%s is (%.2f%% success rate)", result, prob)
+        local mode = q_setting_get(SETTING_LOCALIZE)
+        if mode == FORMAT_INTERNAL then
+            self._fb:addf("  %s, %s, %s", mat1, mat2, mat3)
+        elseif mode == FORMAT_LOCALE then
+            self._fb:addf("  %s, in the presence of %s and %s", mat2, mat1, mat3)
+        else
+            self._fb:addf("  %s, in the presence of", mat2)
+            self._fb:addf("  %s and %s", mat1, mat3)
+        end
+    end,
+
     --[[ Determine and format a single shift ]]
     query = function(self, index)
         q_logf("query(%s)", index)
@@ -93,7 +113,7 @@ SQ = {
 
     --[[ Determine and format all selected shifts ]]
     query_all = function(self)
-        if q_setting_get("include_aplc") then
+        if q_setting_get(SETTING_APLC) then
             self:query_aplc()
         end
         local bounds = self:get_range()
@@ -117,18 +137,8 @@ SQ = {
             self._fb:add("Failed to determine AP/LC recipes")
             return
         end
-        local ap_mat = maybe_localize_material(MAT_AP)
-        self._fb:add(("%s is (%.2f%% success rate)"):format(ap_mat, ap_prob))
-        self._fb:add(("  %s, %s, %s"):format(
-            maybe_localize_material(ap_combo[1]),
-            maybe_localize_material(ap_combo[2]),
-            maybe_localize_material(ap_combo[3])))
-        local lc_mat = maybe_localize_material(MAT_LC)
-        self._fb:add(("%s is (%.2f%% success rate)"):format(lc_mat, lc_prob))
-        self._fb:add(("  %s, %s, %s"):format(
-            maybe_localize_material(lc_combo[1]),
-            maybe_localize_material(lc_combo[2]),
-            maybe_localize_material(lc_combo[3])))
+        self:print_aplc(MAT_AP, ap_prob, ap_combo)
+        self:print_aplc(MAT_LC, lc_prob, lc_combo)
     end,
 
     --[[ Determine if we should refresh the shift list ]]
@@ -157,36 +167,44 @@ SQ = {
     draw_menu = function(self)
         if self._imgui.BeginMenuBar() then
             if self._imgui.BeginMenu("Actions") then
-                if self._imgui.MenuItem("Show Translations") then
-                    q_setting_set("localize", "locale")
-                    self._force_update = true
+                local i18n_conf = q_setting_get(SETTING_LOCALIZE)
+                if i18n_conf ~= FORMAT_LOCALE then
+                    if self._imgui.MenuItem("Show Local Names") then
+                        q_setting_set(SETTING_LOCALIZE, FORMAT_LOCALE)
+                        self._force_update = true
+                    end
                 end
-                if self._imgui.MenuItem("Show Internal Names") then
-                    q_setting_set("localize", "internal")
-                    self._force_update = true
+                if i18n_conf ~= FORMAT_INTERNAL then
+                    if self._imgui.MenuItem("Show Internal Names") then
+                        q_setting_set(SETTING_LOCALIZE, FORMAT_INTERNAL)
+                        self._force_update = true
+                    end
                 end
-                if self._imgui.MenuItem("Show Both") then
-                    q_setting_set("localize", "both")
+                if i18n_conf ~= FORMAT_BOTH then
+                    if self._imgui.MenuItem("Show Local & Internal Names") then
+                        q_setting_set(SETTING_LOCALIZE, FORMAT_BOTH)
+                        self._force_update = true
+                    end
+                end
+
+                self._imgui.Separator()
+                local aplc_str = f_enable(not q_setting_get(SETTING_APLC))
+                if self._imgui.MenuItem(aplc_str .. " AP/LC Recipes") then
+                    q_setting_set(SETTING_APLC, not q_setting_get(SETTING_APLC))
                     self._force_update = true
                 end
 
+                self._imgui.Separator()
                 local log_str = f_enable(not q_logging())
                 if self._imgui.MenuItem(log_str .. " Debugging") then
                     q_set_logging(not q_logging())
                 end
                 if self._imgui.MenuItem("Clear") then
                     self._fb:clear()
-                    self._override_ui = false
                 end
                 if self._imgui.MenuItem("Close") then
                     q_disable_gui()
                 end
-                --[[ if q_setting_get("override_ui") then
-                    self._imgui.Separator()
-                    if self._imgui.MenuItem("Do Custom Shift") then
-                        self._override_ui = true
-                    end
-                end--]]
                 self._imgui.EndMenu()
             end
             self._imgui.EndMenuBar()
@@ -195,11 +213,7 @@ SQ = {
 
     --[[ Draw the main window ]]
     draw_window = function(self)
-        if self._override_ui ~= true then
-            self:_draw_window_main()
-        else
-            self:_draw_window_override()
-        end
+        self:_draw_window_main()
     end,
 
     --[[ Draw the main window content ]]
@@ -208,14 +222,11 @@ SQ = {
 
         -- Draw a helpful "refresh now" button
         if self._imgui.Button("Refresh Shifts") then
-            self._fb:clear()
-            q_log("Calculating shifts...")
-            self:query_all()
+            self:refresh()
         end
 
         if self:check_update() then
-            self._fb:clear()
-            self:query_all()
+            self:refresh()
         end
 
         -- Draw the feedback window Clear button
@@ -238,32 +249,13 @@ SQ = {
         end
 
         -- Display what shifts the user has requested
-        local prev_c = math.floor(q_setting_get("previous_count"))
-        local next_c = math.floor(q_setting_get("next_count"))
+        local prev_c = math.floor(q_setting_get(SETTING_PREVIOUS))
+        local next_c = math.floor(q_setting_get(SETTING_NEXT))
         local next_text = f_shift_count(next_c, "pending")
         local prev_text = f_shift_count(prev_c, "previous")
         self._imgui.Text(("Displaying %s and %s"):format(prev_text, next_text))
 
         self._fb:draw_box()
-    end,
-
-    --[[ Draw the "Do a Custom Shift" window content ]]
-    _draw_window_override = function(self)
-        if self._imgui.Button("Main Menu") then
-            self._override_ui = false
-        end
-
-        local ret, res
-        ret, res = self._imgui.InputTextWithHint(
-            "Source Material", "##force_prev", self._ovui_mat_source)
-        if ret then self._ovui_mat_source = res end
-        ret, res = self._imgui.InputTextWithHint(
-            "Target Material", "##force_prev", self._ovui_mat_target)
-        if ret then self._ovui_mat_target = res end
-
-        if self._imgui.Button("Go!") then
-            GamePrint(("Shifting '%s' -> '%s'"):format(self._ovui_mat_source, self._ovui_mat_target))
-        end
     end,
 
     --[[ Draw everything ]]
@@ -285,9 +277,13 @@ function OnModPostInit()
     query = SQ:new(imgui)
 
     -- Fix problem with contradicting localize options (boolean / string)
-    local localize = q_setting_get("localize")
-    if localize ~= "locale" and localize ~= "internal" and localize ~= "both" then
-        q_setting_set("localize", "locale")
+    local localize = q_setting_get(SETTING_LOCALIZE)
+    if localize ~= FORMAT_LOCALE then
+        if localize ~= FORMAT_INTERNAL then
+            if localize ~= FORMAT_BOTH then
+                q_setting_set(SETTING_LOCALIZE, FORMAT_LOCALE)
+            end
+        end
     end
 end
 
@@ -314,6 +310,12 @@ function OnWorldPostUpdate()
             if not res then GamePrint(tostring(ret)) end
             imgui.End()
         end
+    end
+end
+
+function OnPlayerSpawned(player_entity)
+    if query ~= nil then
+        query:refresh()
     end
 end
 

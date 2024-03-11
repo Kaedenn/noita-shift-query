@@ -2,8 +2,10 @@
 -- Shift Query mod core logic
 --]]
 
+-- luacheck: globals pick_random_from_table_weighted random_nexti random_create
+
 dofile("mods/shift_query/common.lua")
-dofile("mods/shift_query/materials.lua")
+matinfo = dofile("mods/shift_query/materials.lua")
 
 MAX_SHIFTS = 20     -- maximum number of shifts according to fungal_shift.lua
 COOLDOWN = 60*60*5  -- post shift cooldown; five minutes
@@ -29,22 +31,25 @@ end
 
 -- Determine the numbered shift, where 0 is the first shift
 function sq_get_abs(iter)
-    SetRandomSeed(89346, 42345+iter)
-    local rnd = random_create(9123, 58925+iter)
-    local mat_from = pick_random_from_table_weighted(rnd, MATERIALS_FROM)
-    local mat_to = pick_random_from_table_weighted(rnd, MATERIALS_TO)
+  local mat_from = matinfo.get_materials_from()
+  local mat_to = matinfo.get_materials_to()
+  SetRandomSeed(89346, 42345+iter)
+  local rnd = random_create(9123, 58925+iter)
 
-    mat_from.flask = false
-    mat_to.flask = false
-    if random_nexti(rnd, 1, 100) <= 75 then -- 75% to use a flask
-        if random_nexti(rnd, 1, 100) <= 50 then -- 50% which side gets it
-            mat_from.flask = true
-        else
-            mat_to.flask = true
-        end
+  mat_from = pick_random_from_table_weighted(rnd, mat_from)
+  mat_to = pick_random_from_table_weighted(rnd, mat_to)
+
+  mat_from.flask = false
+  mat_to.flask = false
+  if random_nexti(rnd, 1, 100) <= 75 then -- 75% to use a flask
+    if random_nexti(rnd, 1, 100) <= 50 then -- 50% which side gets it
+      mat_from.flask = true
+    else
+      mat_to.flask = true
     end
+  end
 
-    return {from=mat_from, to=mat_to}
+  return {from=mat_from, to=mat_to}
 end
 
 -- vim: set ts=2 sts=2 sw=2:

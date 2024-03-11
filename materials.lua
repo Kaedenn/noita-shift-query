@@ -1,10 +1,13 @@
 -- Fungal Query materials
 
+-- The following appears to crash Noita (Dec 21, release)
+--dofile("data/scripts/magic/fungal_shift.lua")
+
 -- The tables below are taken directly from Noita's own fungal_shift.lua
 -- script, with some formatting for good measure. Note that changes to
 -- Noita's fungal_shift.lua will not be reflected here! Therefore, this
 -- mod does *not* support alterations to fungal shift logic or materials.
-MATERIALS_FROM = {
+MATERIALS_FROM_COPY = {
     { probability = 1.0,
       materials = { "water", "water_static", "water_salt", "water_ice" },
       name_material = "water" },
@@ -53,7 +56,7 @@ MATERIALS_FROM = {
       name_material = "gold" },
 }
 
-MATERIALS_TO = {
+MATERIALS_TO_COPY = {
     { probability = 1.00, material = "water" },
     { probability = 1.00, material = "lava" },
     { probability = 1.00, material = "radioactive_liquid" },
@@ -87,19 +90,40 @@ MATERIALS_TO = {
     { probability = 0.01, material = "cheese_static" },
 }
 
-function add_source_material(materials, probability, name)
-    local entry = {
-        probability = probability,
-        materials = materials
-    }
-    if name ~= nil then
-        entry.name_material = name
-    end
-    table.insert(MATERIALS_FROM, entry)
-end
+return {
+    --[[ Obtain the materials_from table.
+    -- This first attempts to determine the table directly from Noita, and then
+    -- falls back to the table defined above.
+    --]]
+    get_materials_from = function()
+        dofile("data/scripts/magic/fungal_shift.lua")
+        -- luacheck: globals materials_from materials_to
+        if materials_from and materials_to then
+            return materials_from
+        end
+        GamePrint("shift_query - unable to get source material table; using local copy")
+        return MATERIALS_FROM_COPY
+    end,
 
-function add_target_material(material, probability)
-    table.insert(MATERIALS_TO, {material=material, probability=probability})
-end
+    --[[ Obtain the materials_to table.
+    -- This first attempts to determine the table directly from Noita, and then
+    -- falls back to the table defined above.
+    --]]
+    get_materials_to = function()
+        dofile("data/scripts/magic/fungal_shift.lua")
+        -- luacheck: globals materials_from materials_to
+        if materials_from and materials_to then
+            return materials_to
+        end
+        GamePrint("shift_query - unable to get source material table; using local copy")
+        return MATERIALS_TO_COPY
+    end,
+
+    --[[ Material tables ]]
+    materials_from_direct = MATERIALS_FROM_DIRECT or {},
+    materials_to_direct = MATERIALS_TO_DIRECT or {},
+    materials_from_copy = MATERIALS_FROM_COPY,
+    materials_to_copy = MATERIALS_TO_COPY,
+}
 
 -- vim: set ts=4 sts=4 sw=4:
