@@ -3,6 +3,8 @@
 MIN_SHIFTS = -1     -- values < 0 mean "all"
 MAX_SHIFTS = 20     -- the game implicitly supports only 20 shifts
 
+ALL_SHIFTS = -1     -- values < 0 mean "all"
+
 FLAG_ON = "1"
 FLAG_OFF = "0"
 

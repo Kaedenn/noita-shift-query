@@ -9,10 +9,14 @@
 -- one-at-a-time and in bulk)
 -- ** Ability to override MAX_SHIFTS
 
+--[[
+-- FIXME: previous_count and next_count display -2 .. 20
+-- FIXME: previous_count and next_count are not integers
+--]]
 
-dofile("data/scripts/lib/utilities.lua")
-dofile("data/scripts/lib/mod_settings.lua")
-dofile_once("mods/shift_query/constants.lua")
+dofile_once("data/scripts/lib/utilities.lua")
+dofile_once("data/scripts/lib/mod_settings.lua")
+dofile_once("mods/shift_query/files/common.lua")
 
 -- luacheck: globals MOD_SETTING_SCOPE_RUNTIME
 
@@ -21,11 +25,24 @@ dofile_once("mods/shift_query/constants.lua")
 -- ModSettingSet(setting_id, new_value)
 
 function mod_setting_changed_callback(mod_id, gui, in_main_menu, setting, old_value, new_value)
-    if setting == "previous_count" or setting == "next_count" then
-        if new_value < MIN_SHIFTS then
-            GamePrint(("setting %s %s outside range"):format(setting, tostring(new_value)))
+    --[[ TODO: enforce integer values
+    logger_add(("Setting %s changed from %s to %s"):format(
+        setting.id, tostring(old_value), tostring(new_value)))
+    if setting.id == "previous_count" or setting.id == "next_count" then
+        local final_value = math.floor(new_value)
+        if final_value < MIN_SHIFTS then
+            logger_add(("Setting %s %d below %d"):format(setting.id, new_value, final_value))
+            final_value = MIN_SHIFTS
+        elseif final_value > MAX_SHIFTS then
+            logger_add(("Setting %s %d above %d"):format(setting.id, new_value, final_value))
+            final_value = MAX_SHIFTS
         end
+        if new_value ~= final_value then
+            ModSettingSet(MOD_ID .. "." .. setting.id, final_value)
+        end
+        return final_value
     end
+    ]]
 end
 
 mod_settings_version = 3
@@ -71,13 +88,6 @@ mod_settings = {
         value_default = true,
         scope = MOD_SETTING_SCOPE_RUNTIME,
     },
-    --[[{
-        id = "override_ui",
-        ui_name = "Enable Override UI",
-        ui_description = "Enable use of the manual shifting UI",
-        value_default = false,
-        scope = MOD_SETTING_SCOPE_RUNTIME,
-    },]]
     {
         id = "include_aplc",
         ui_name = "Include AP / LC recipes",

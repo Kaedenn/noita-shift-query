@@ -11,7 +11,7 @@
 --]]
 
 --[[ Example use:
---  local APLC = dofile("mods/shift_query/aplc.lua")
+--  local APLC = dofile("mods/shift_query/files/aplc.lua")
 --  function get_aplc_data()
 --      local lc_combo, ap_combo, lc_prob, ap_prob = APLC.get_recipe()
 --      local ap_str = ("AP: %s, %s, %s (%.02f%%)"):format(

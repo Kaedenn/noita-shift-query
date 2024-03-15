@@ -11,7 +11,7 @@
 -- the "(no flask)" designation, as it's redundant.
 
 dofile_once("data/scripts/lib/utilities.lua")
-dofile_once("mods/shift_query/constants.lua")
+dofile_once("mods/shift_query/files/constants.lua")
 
 MOD_ID = "shift_query"
 K_CONFIG_LOG_ENABLE = MOD_ID .. "." .. "q_logging"
@@ -121,6 +121,24 @@ end
 -- Disable the GUI
 function q_disable_gui()
     q_setting_set(SETTING_ENABLE, false)
+end
+
+-- Clear the logging global if set
+function logger_clear()
+    local value = GlobalsGetValue("shift_query.logging") or ""
+    if value ~= "" then
+        GlobalsSetValue("shift_query.logging", "")
+    end
+end
+
+-- Add a component to the logging global
+function logger_add(piece)
+    local old_log = GlobalsGetValue("shift_query.logging") or ""
+    local new_log = tostring(piece)
+    if old_log ~= "" then
+        new_log = old_log .. "\n" .. new_log
+    end
+    GlobalsSetValue("shift_query.logging", new_log)
 end
 
 -- Localize a material, either "name" or "$mat_name".

@@ -4,8 +4,8 @@
 
 -- luacheck: globals pick_random_from_table_weighted random_nexti random_create
 
-dofile("mods/shift_query/common.lua")
-matinfo = dofile("mods/shift_query/materials.lua")
+dofile("mods/shift_query/files/common.lua")
+matinfo = dofile("mods/shift_query/files/materials.lua")
 
 MAX_SHIFTS = 20     -- maximum number of shifts according to fungal_shift.lua
 COOLDOWN = 60*60*5  -- post shift cooldown; five minutes

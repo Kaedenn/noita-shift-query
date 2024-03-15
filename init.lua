@@ -24,12 +24,12 @@
 --
 -- Add "fungal_shift_ui_icon" to the ImGui window.
 
-dofile_once("mods/shift_query/common.lua")
-dofile_once("mods/shift_query/materials.lua")
-dofile_once("mods/shift_query/query.lua")
+dofile_once("mods/shift_query/files/common.lua")
+dofile_once("mods/shift_query/files/materials.lua")
+dofile_once("mods/shift_query/files/query.lua")
 dofile_once("mods/shift_query/lib/feedback.lua")
-dofile_once("mods/shift_query/constants.lua")
-APLC = dofile_once("mods/shift_query/aplc.lua")
+dofile_once("mods/shift_query/files/constants.lua")
+APLC = dofile_once("mods/shift_query/files/aplc.lua")
 
 MAT_AP = "midas_precursor"
 MAT_LC = "magic_liquid_hp_regeneration_unstable"
@@ -204,6 +204,32 @@ SQ = {
                 end
                 if self._imgui.MenuItem("Close") then
                     q_disable_gui()
+                end
+                self._imgui.EndMenu()
+            end
+
+            if self._imgui.BeginMenu("Display") then
+                if self._imgui.BeginMenu("Prior Shifts") then
+                    if self._imgui.MenuItem("Show All") then
+                        q_setting_set(SETTING_PREVIOUS, tostring(ALL_SHIFTS))
+                        self._force_update = true
+                    end
+                    if self._imgui.MenuItem("Show One") then
+                        q_setting_set(SETTING_PREVIOUS, tostring(1))
+                        self._force_update = true
+                    end
+                    self._imgui.EndMenu()
+                end
+                if self._imgui.BeginMenu("Pending Shifts") then
+                    if self._imgui.MenuItem("Show All") then
+                        q_setting_set(SETTING_NEXT, tostring(ALL_SHIFTS))
+                        self._force_update = true
+                    end
+                    if self._imgui.MenuItem("Show Next") then
+                        q_setting_set(SETTING_NEXT, tostring(1))
+                        self._force_update = true
+                    end
+                    self._imgui.EndMenu()
                 end
                 self._imgui.EndMenu()
             end

@@ -5,10 +5,8 @@ them. Therefore, this mod is compatible with the Fungal Timer mod.
 
 ## Prerequisites
 
-This mod depends on the
-[https://github.com/dextercd/Noita-Dear-ImGui/releases](Noita-DearImGui) mod.
-Note that the Noita-DearImGui mod must appear above Fungal Shift Query in the
-mod order.
+This mod depends on the Noita-DearImGui mod. Note that the Noita-DearImGui mod
+must appear above Fungal Shift Query in the mod order.
 
 ## Installation
 
