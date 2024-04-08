@@ -52,6 +52,7 @@ Feedback = {
         magenta_light = {1, 0.5, 1},
         yellow_light = {1, 1, 0.5},
         gray = {0.5, 0.5, 0.5},
+        lightgray = {0.75, 0.75, 0.75},
     },
 
     -- The lines table, public for convenience

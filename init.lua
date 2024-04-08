@@ -82,7 +82,7 @@ SQ = {
         local mat1 = maybe_localize_material(combo[1])
         local mat2 = maybe_localize_material(combo[2])
         local mat3 = maybe_localize_material(combo[3])
-        self._fb:addf("%s is (%.2f%% success rate)", result, prob)
+        self._fb:addf("%s is (%d%% success rate)", result, prob)
         local mode = q_setting_get(SETTING_LOCALIZE)
         if mode == FORMAT_INTERNAL then
             self._fb:addf("  %s, %s, %s", mat1, mat2, mat3)
@@ -114,7 +114,12 @@ SQ = {
             if rare_to then
                 str_to = {color=RARE_MAT_COLOR, pair[2]}
             end
-            self._fb:add({which_msg, "shift is", str_from, "->", str_to})
+            self._fb:add({
+                which_msg, 
+                {color="lightgray", "shift is"},
+                str_from,
+                {color="lightgray", "->"},
+                str_to})
         end
     end,
 

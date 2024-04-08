@@ -64,7 +64,7 @@ function f_shift_count(num, label)
     return ("%s %s %s"):format(prefix, label, suffix)
 end
 
---[[ Returns true if logging is enabled, false otherwise. ]]
+--[[ Returns true if logging is enabled, false otherwise ]]
 function q_logging()
     return GlobalsGetValue(K_CONFIG_LOG_ENABLE, FLAG_OFF) ~= FLAG_OFF
 end
@@ -81,14 +81,14 @@ function q_set_logging(enable)
     q_force_update()
 end
 
---[[ Display a logging message if logging is enabled. ]]
+--[[ Display a logging message if logging is enabled ]]
 function q_log(msg)
     if q_logging() then
         q_print("DEBUG: " .. msg)
     end
 end
 
---[[ Display a formatted logging message if logging is enabled. ]]
+--[[ Display a formatted logging message if logging is enabled ]]
 function q_logf(msg, ...)
     if q_logging() then
         q_log(msg:format(...))
@@ -190,20 +190,27 @@ function maybe_localize_material(material)
     return localize_material_via(material, loc_mode)
 end
 
---[[ Format a material with the possibility of including a flask. ]]
+--[[ Format a material with the possibility of including a flask ]]
 function flask_or(material, use_flask)
     local logging = q_logging()
     local mname = maybe_localize_material(material)
     if use_flask then
-        return ("flask or %s"):format(mname)
+        return {
+            {color="cyan_light", "flask"},
+            {color="lightgray", "or"},
+            mname
+        }
     end
     if logging then
-        return ("%s (no flask)"):format(mname)
+        return {
+            mname,
+            {color="lightgray", "(no flask)"}
+        }
     end
     return mname
 end
 
---[[ Format a fungal shift. Returns a table of pairs of strings. ]]
+--[[ Format a fungal shift. Returns a table of pairs of strings ]]
 function format_shift(shift)
     if not shift then return {{"invalid shift", "invalid shift"}} end
     local source = shift.from

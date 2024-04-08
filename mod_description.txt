@@ -4,6 +4,8 @@ This mod will tell you exactly these. It lists all pending shifts (configurable)
 
 If a shift mentions using a flask, then a flask will be used, assuming you're holding one. If a flask isn't mentioned, then the shift won't use one.
 
+**NEW!** Shifts using "rare" materials are highlighted yellow.
+**NEW!** Formatting of multi-material shifts (configurable) to include all materials instead of just the primary one.
 **NEW!** Alchemic precursor and lively concoction are now included! The number next to the materials is the conversion chance. A higher number means a more effective conversion.
 **NEW!** Flask resolving! If enabled via the Actions menu, this mod will tell you exactly what materials have been shifted, even if a flask was used.
 **NEW!** Live feedback for shift delay period! This mod will tell you exactly how many seconds remain before you can perform another fungal shift.
