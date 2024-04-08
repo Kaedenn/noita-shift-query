@@ -33,6 +33,27 @@
 
 Feedback = {
 
+    colors = {
+        -- Pure colors
+        red = {1, 0, 0},
+        green = {0, 1, 0},
+        blue = {0, 0, 1},
+        cyan = {0, 1, 1},
+        magenta = {1, 0, 1},
+        yellow = {1, 1, 0},
+        white = {1, 1, 1},
+        black = {0, 0, 0},
+
+        -- Blended colors
+        red_light = {1, 0.5, 0.5},
+        green_light = {0.5, 1, 0.5},
+        blue_light = {0.5, 0.5, 1},
+        cyan_light = {0.5, 1, 1},
+        magenta_light = {1, 0.5, 1},
+        yellow_light = {1, 1, 0.5},
+        gray = {0.5, 0.5, 0.5},
+    },
+
     -- The lines table, public for convenience
     lines = {},
 
@@ -79,14 +100,48 @@ Feedback = {
         end
     end,
 
+    -- Convert a given color to a real color
+    get_color = function(self, color)
+        if color == nil then return nil end
+        if type(color) == "string" then
+            if self.colors[color] then
+                return self.colors[color]
+            end
+        end
+        if type(color) == "table" then
+            return {
+                color[1] or 0,
+                color[2] or 0,
+                color[3] or 0
+            }
+        end
+    end,
+
+    -- Draw a single line; public for convenience
+    draw_line = function(self, line)
+        if type(line) == "string" then
+            self._imgui.Text(line)
+        elseif type(line) == "table" then
+            local color = self:get_color(line.color)
+            if color then
+                self._imgui.PushStyleColor(self._imgui.Col.Text, unpack(color))
+            end
+            for idx, part in ipairs(line) do
+                if idx > 1 then self._imgui.SameLine() end
+                self:draw_line(part)
+            end
+            if color then
+                self._imgui.PopStyleColor()
+            end
+        else
+            self._imgui.Text(tostring(line))
+        end
+    end,
+
     -- Draw the box of text
     draw_box = function(self)
         for _, line in ipairs(self.lines) do
-            if type(line) == "string" then
-                self._imgui.Text(line)
-            elseif type(line) == "table" then
-                self._imgui.Text(line[1]) -- TODO: font
-            end
+            self:draw_line(line)
         end
     end,
 

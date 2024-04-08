@@ -1,0 +1,18 @@
+What are the fungal shifts for this seed? Which shifts will use a flask?
+
+This mod will tell you exactly these. It lists all pending shifts (configurable) using either the internal material name or your localized name (also configurable).
+
+If a shift mentions using a flask, then a flask will be used, assuming you're holding one. If a flask isn't mentioned, then the shift won't use one.
+
+**NEW!** Alchemic precursor and lively concoction are now included! The number next to the materials is the conversion chance. A higher number means a more effective conversion.
+**NEW!** Flask resolving! If enabled via the Actions menu, this mod will tell you exactly what materials have been shifted, even if a flask was used.
+**NEW!** Live feedback for shift delay period! This mod will tell you exactly how many seconds remain before you can perform another fungal shift.
+
+Alchemic Precursor / Lively Concoction behavior: These recipes are randomly generated every seed and take three random materials to generate Alchemic Precursor or Lively Concoction. The behavior is as follows:
+Material_2, in the presence of Material_1 and Material_3, has a N percent chance to become Alchemic Precursor or Lively Concoction. Therefore, you want a large amount of the second material and a small amount of the first and third materials. A higher conversion percentage results in a more efficient conversion.
+
+This mod requires Noita-Dear-ImGui, which requires unsafe mods to be enabled.
+
+This has been tested against the February 14th, 2024 update. Note that the Beta (as of March 3rd, 2024) includes more materials and so this mod may give you incorrect results.
+
+Feedback welcome!

@@ -231,7 +231,6 @@ fi
 
 info "Detected differences between local and deployed directories"
 if [[ "$ACTION" == "cp" ]]; then
-  info "Copying . to $DEST_DIR"
 
   # Should we create a backup of the deployed directory?
   if [[ -n "${BACKUP:-}" ]]; then
@@ -244,6 +243,7 @@ if [[ "$ACTION" == "cp" ]]; then
     fi
   fi
 
+  info "Copying . to $DEST_DIR"
   # Deploy this mod to the destination directory
   if dry checked rm -r "$DEST_DIR"; then
     mkdir "$DEST_DIR" 2>/dev/null

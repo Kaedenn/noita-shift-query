@@ -1,7 +1,18 @@
 -- Fungal Query materials
 
--- The following appears to crash Noita (Dec 21, release)
---dofile("data/scripts/magic/fungal_shift.lua")
+--[[ NOTE:
+-- While it would be easy just to have
+dofile("data/scripts/magic/fungal_shift.lua")
+-- and expose those values here; that script (as of Feb 14 2024) crashes Noita
+-- if executed during mod initialization. This is because the script attempts
+-- to validate the material tables via the CellFactory (CellFactory_GetType)
+-- the instant the script is executed. The CellFactory is not initialized by
+-- this point and thus the game crashes.
+--
+-- To work around this, this file provides two solutions:
+--  1. Load data/scripts/magic/fungal_shift.lua only when requested, and
+--  2. Provide hard-coded material tables if the native ones are unavailable.
+--]]
 
 -- The tables below are taken directly from Noita's own fungal_shift.lua
 -- script, with some formatting for good measure. Note that changes to
@@ -90,19 +101,23 @@ MATERIALS_TO_COPY = {
     { probability = 0.01, material = "cheese_static" },
 }
 
+function get_material_tables()
+    dofile("data/scripts/magic/fungal_shift.lua")
+    if materials_from and materials_to then
+        return materials_from, materials_to
+    end
+    GamePrint("shift_query - unable to get material tables; using local versions")
+    return MATERIALS_FROM_COPY, MATERIALS_TO_COPY
+end
+
 return {
     --[[ Obtain the materials_from table.
     -- This first attempts to determine the table directly from Noita, and then
     -- falls back to the table defined above.
     --]]
     get_materials_from = function()
-        dofile("data/scripts/magic/fungal_shift.lua")
-        -- luacheck: globals materials_from materials_to
-        if materials_from and materials_to then
-            return materials_from
-        end
-        GamePrint("shift_query - unable to get source material table; using local copy")
-        return MATERIALS_FROM_COPY
+        local materials_from, materials_to = get_material_tables()
+        return materials_from
     end,
 
     --[[ Obtain the materials_to table.
@@ -110,13 +125,42 @@ return {
     -- falls back to the table defined above.
     --]]
     get_materials_to = function()
-        dofile("data/scripts/magic/fungal_shift.lua")
-        -- luacheck: globals materials_from materials_to
-        if materials_from and materials_to then
-            return materials_to
+        local materials_from, materials_to = get_material_tables()
+        return materials_to
+    end,
+
+    --[[ True if the given shift source is considered "rare" ]]
+    is_rare_source = function(material, cutoff)
+        if type(cutoff) ~= "number" then
+            cutoff = 0.2
         end
-        GamePrint("shift_query - unable to get source material table; using local copy")
-        return MATERIALS_TO_COPY
+        local materials_from, materials_to = get_material_tables()
+        for _, entry in ipairs(materials_from) do
+            if entry.probability <= cutoff then
+                for _, shift_mat in ipairs(entry.materials) do
+                    if shift_mat == material then
+                        return true
+                    end
+                end
+            end
+        end
+        return false
+    end,
+
+    --[[ True if the given shift destination is considered "rare" ]]
+    is_rare_target = function(material, cutoff)
+        if type(cutoff) ~= "number" then
+            cutoff = 0.2
+        end
+        local materials_from, materials_to = get_material_tables()
+        for _, entry in ipairs(materials_to) do
+            if entry.probability <= cutoff then
+                if entry.material == material then
+                    return true
+                end
+            end
+        end
+        return false
     end,
 
     --[[ Material tables ]]

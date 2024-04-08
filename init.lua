@@ -19,20 +19,22 @@
 --
 -- PLANNED FEATURES
 --
--- There's no ImGui fallback behavior, nor are there any diagnostic
--- messages if ImGui isn't available.
+-- Add either flask or pouch icon next to each material with the
+-- material's CellData color (parse "data/materials.xml").
 --
 -- Add "fungal_shift_ui_icon" to the ImGui window.
 
 dofile_once("mods/shift_query/files/common.lua")
-dofile_once("mods/shift_query/files/materials.lua")
 dofile_once("mods/shift_query/files/query.lua")
 dofile_once("mods/shift_query/lib/feedback.lua")
 dofile_once("mods/shift_query/files/constants.lua")
 APLC = dofile_once("mods/shift_query/files/aplc.lua")
+--nxml = dofile_once("mods/shift_query/lib/nxml.lua")
 
 MAT_AP = "midas_precursor"
 MAT_LC = "magic_liquid_hp_regeneration_unstable"
+
+RARE_MAT_COLOR = Feedback.colors.yellow_light
 
 SQ = {
     new = function(self, imgui)
@@ -40,7 +42,6 @@ SQ = {
         self._fb = Feedback:init(imgui)
         self._iter_track = -1   -- used for update detection
         self._frame_track = -1  -- used for update detection
-        self._force_update = false
         return self
     end,
 
@@ -71,13 +72,8 @@ SQ = {
             idx_end = math.min(curr_iter + range_next, MAX_SHIFTS)
         end
 
-        q_logf("start = %s, end = %s", idx_start, idx_end)
+        q_logf("start=%s, end=%s", idx_start, idx_end)
         return {first=idx_start, last=idx_end}
-    end,
-
-    --[[ Format the final shift line ]]
-    format_final = function(self, which, source, dest)
-        return ("%s shift is %s -> %s"):format(which, source, dest)
     end,
 
     --[[ Display either an AP or an LC recipe ]]
@@ -100,14 +96,25 @@ SQ = {
 
     --[[ Determine and format a single shift ]]
     query = function(self, index)
-        q_logf("query(%s)", index)
+        q_logf("query(%d)", index)
         local iter = get_curr_iter()
         local shift = sq_get_abs(index)
         local which_msg = format_relative(iter, index)
-        for _, pair in ipairs(format_shift(shift)) do
-            local line = self:format_final(which_msg, pair[1], pair[2])
-            q_log(line)
-            self._fb:add(line)
+        for idx, pair in ipairs(format_shift(shift)) do
+            q_logf("pair[%d]={%q, %q}", idx, pair[1], pair[2])
+            -- To disable colors (for rare shift annotation), comment out the
+            -- code below and un-comment the following line.
+            --self._fb:add(("%s shift is %s -> %s"):format(which_msg, pair[1], pair[2]))
+            local rare_from, rare_to = sq_is_rare_shift(shift, nil)
+            local str_from = pair[1]
+            local str_to = pair[2]
+            if rare_from then
+                str_from = {color=RARE_MAT_COLOR, pair[1]}
+            end
+            if rare_to then
+                str_to = {color=RARE_MAT_COLOR, pair[2]}
+            end
+            self._fb:add({which_msg, "shift is", str_from, "->", str_to})
         end
     end,
 
@@ -143,8 +150,8 @@ SQ = {
 
     --[[ Determine if we should refresh the shift list ]]
     check_update = function(self)
-        if self._force_update then
-            self._force_update = false
+        if q_is_update_forced() then
+            q_clear_force_update()
             return true
         end
         local iter = get_curr_iter()
@@ -163,35 +170,81 @@ SQ = {
         return draw
     end,
 
+    --[[ Obtain the actual list of shifted materials ]]
+    get_shift_map = function(self)
+        local world = EntityGetWithTag("world_state")[1]
+        local state = EntityGetComponent(world, "WorldStateComponent")[1]
+        local shifts = ComponentGetValue2(state, "changed_materials")
+        local shift_pairs = {}
+        for idx = 1, #shifts, 2 do
+            local mat1 = shifts[idx]
+            local mat2 = shifts[idx+1]
+            q_logf("shift %d shifted %s to %s", (idx+1)/2, mat1, mat2)
+            table.insert(shift_pairs, {mat1, mat2})
+        end
+        return shift_pairs
+    end,
+
+    --[[ Format the cooldown timer ]]
+    format_cooldown = function(self)
+        local last_shift_frame = get_last_shift_frame()
+        local cooldown = get_cooldown_sec()
+        if last_shift_frame > -1 then
+            if cooldown > 0 then
+                return format_duration(cooldown)
+            end
+        end
+        return nil
+    end,
+
     --[[ Draw the menu bar ]]
     draw_menu = function(self)
         if self._imgui.BeginMenuBar() then
             if self._imgui.BeginMenu("Actions") then
+                if self._imgui.MenuItem("Refresh") then
+                    self:refresh()
+                end
+                self._imgui.Separator()
+
                 local i18n_conf = q_setting_get(SETTING_LOCALIZE)
                 if i18n_conf ~= FORMAT_LOCALE then
                     if self._imgui.MenuItem("Show Local Names") then
                         q_setting_set(SETTING_LOCALIZE, FORMAT_LOCALE)
-                        self._force_update = true
                     end
                 end
                 if i18n_conf ~= FORMAT_INTERNAL then
                     if self._imgui.MenuItem("Show Internal Names") then
                         q_setting_set(SETTING_LOCALIZE, FORMAT_INTERNAL)
-                        self._force_update = true
                     end
                 end
                 if i18n_conf ~= FORMAT_BOTH then
                     if self._imgui.MenuItem("Show Local & Internal Names") then
                         q_setting_set(SETTING_LOCALIZE, FORMAT_BOTH)
-                        self._force_update = true
                     end
+                end
+
+                self._imgui.Separator()
+                local expand_opt = q_setting_get(SETTING_EXPAND)
+                if expand_opt == EXPAND_ONE then
+                    if self._imgui.MenuItem("Show All Source Materials") then
+                        q_setting_set(SETTING_EXPAND, EXPAND_ALL)
+                    end
+                else
+                    if self._imgui.MenuItem("Show Primary Source Material") then
+                        q_setting_set(SETTING_EXPAND, EXPAND_ONE)
+                    end
+                end
+
+                self._imgui.Separator()
+                local real_str = f_enable(not q_setting_get(SETTING_REAL))
+                if self._imgui.MenuItem(real_str .. " Flask Resolving") then
+                    q_setting_set(SETTING_REAL, not q_setting_get(SETTING_REAL))
                 end
 
                 self._imgui.Separator()
                 local aplc_str = f_enable(not q_setting_get(SETTING_APLC))
                 if self._imgui.MenuItem(aplc_str .. " AP/LC Recipes") then
                     q_setting_set(SETTING_APLC, not q_setting_get(SETTING_APLC))
-                    self._force_update = true
                 end
 
                 self._imgui.Separator()
@@ -203,6 +256,7 @@ SQ = {
                     self._fb:clear()
                 end
                 if self._imgui.MenuItem("Close") then
+                    GamePrint("UI closed; re-open using the Mod Settings window")
                     q_disable_gui()
                 end
                 self._imgui.EndMenu()
@@ -212,25 +266,22 @@ SQ = {
                 if self._imgui.BeginMenu("Prior Shifts") then
                     if self._imgui.MenuItem("Show All") then
                         q_setting_set(SETTING_PREVIOUS, tostring(ALL_SHIFTS))
-                        self._force_update = true
                     end
                     if self._imgui.MenuItem("Show One") then
                         q_setting_set(SETTING_PREVIOUS, tostring(1))
-                        self._force_update = true
                     end
                     self._imgui.EndMenu()
                 end
                 if self._imgui.BeginMenu("Pending Shifts") then
                     if self._imgui.MenuItem("Show All") then
                         q_setting_set(SETTING_NEXT, tostring(ALL_SHIFTS))
-                        self._force_update = true
                     end
                     if self._imgui.MenuItem("Show Next") then
                         q_setting_set(SETTING_NEXT, tostring(1))
-                        self._force_update = true
                     end
                     self._imgui.EndMenu()
                 end
+
                 self._imgui.EndMenu()
             end
             self._imgui.EndMenuBar()
@@ -239,39 +290,23 @@ SQ = {
 
     --[[ Draw the main window ]]
     draw_window = function(self)
-        self:_draw_window_main()
-    end,
-
-    --[[ Draw the main window content ]]
-    _draw_window_main = function(self)
         local iter = get_curr_iter()
-
-        -- Draw a helpful "refresh now" button
-        if self._imgui.Button("Refresh Shifts") then
-            self:refresh()
-        end
 
         if self:check_update() then
             self:refresh()
         end
 
-        -- Draw the feedback window Clear button
-        self._imgui.SameLine()
-        self._fb:draw_button()
-
         -- Draw the current shift iteration
+        self._imgui.Text(("Shift: %s;"):format(iter))
+
         self._imgui.SameLine()
-        self._imgui.Text(("Shift: %s"):format(iter))
 
         -- Draw the current shift cooldown
-        local last_shift_frame = get_last_shift_frame()
-        local cooldown = get_cooldown_sec()
-        if last_shift_frame > -1 then
-            if cooldown > 0 then
-                self._imgui.Text(("Cooldown: %s"):format(format_duration(cooldown)))
-            else
-                self._imgui.Text("Cooldown finished")
-            end
+        local cooldown = self:format_cooldown()
+        if cooldown ~= nil then
+            self._imgui.Text(("Cooldown: %s"):format(cooldown))
+        else
+            self._imgui.Text("Cooldown finished")
         end
 
         -- Display what shifts the user has requested
@@ -280,6 +315,18 @@ SQ = {
         local next_text = f_shift_count(next_c, "pending")
         local prev_text = f_shift_count(prev_c, "previous")
         self._imgui.Text(("Displaying %s and %s"):format(prev_text, next_text))
+
+        if q_setting_get(SETTING_REAL) then
+            for _, matpair in ipairs(self:get_shift_map()) do
+                -- Don't localize the material; shifting affects that
+                local from_str, to_str = matpair[1], matpair[2]
+                self._fb:draw_line({
+                    {color="green", from_str},
+                    "became",
+                    {color="green", to_str}
+                })
+            end
+        end
 
         self._fb:draw_box()
     end,
@@ -291,16 +338,16 @@ SQ = {
     end
 }
 
--- function OnWorldInitialized() end
--- function OnModPostInit() end
--- function OnPlayerSpawned(player_entity) end
-
 imgui = nil
 query = nil
 
+-- function OnWorldInitialized() end
+
 function OnModPostInit()
-    imgui = load_imgui({version="1.3.0", mod="FungalShiftQuery"})
-    query = SQ:new(imgui)
+    if load_imgui then
+        imgui = load_imgui({version="1.3.0", mod="FungalShiftQuery"})
+        query = SQ:new(imgui)
+    end
 
     -- Fix problem with contradicting localize options (boolean / string)
     local localize = q_setting_get(SETTING_LOCALIZE)
@@ -316,22 +363,34 @@ end
 -- The actual driving code, executed once per frame after world update
 function OnWorldPostUpdate()
     local ready = q_get_enabled()
-    local window_flags = imgui.WindowFlags.NoFocusOnAppearing
-    window_flags = window_flags + imgui.WindowFlags.MenuBar
-    window_flags = window_flags + imgui.WindowFlags.NoNavInputs
 
     if not imgui then
-        GamePrint("imgui not initialized")
+        GamePrint(table.concat({
+            "shift_query - Noita-Dear-ImGui not found;",
+            "see workshop page for instructions"}, " "))
+        GamePrint(table.concat({
+            "shift_query - Ensure unsafe mods are enabled,",
+            "Noita-Dear-ImGui is installed and active,",
+            "and this mod is below Noita-Dear-ImGui in the mod list"}, " "))
         ready = false
-    end
-
-    if not query then
-        GamePrint("query object not initialized")
+    elseif not query then
+        GamePrint("shift_query - query object not initialized")
         ready = false
     end
 
     if ready then
-        if imgui.Begin("Fungal Shifts", nil, window_flags) then
+        local window_flags = bit.bor(
+            imgui.WindowFlags.NoFocusOnAppearing,
+            imgui.WindowFlags.MenuBar,
+            imgui.WindowFlags.NoNavInputs,
+            imgui.WindowFlags.HorizontalScrollbar)
+        local wtitle = "Fungal Shifts"
+        local last_shift = get_last_shift_frame()
+        local cooldown = get_cooldown_sec()
+        if last_shift > -1 and cooldown > 0 then
+            wtitle = ("%s (%s)"):format(wtitle, format_duration(cooldown))
+        end
+        if imgui.Begin(wtitle .. "###Main", nil, window_flags) then
             local res, ret = pcall(query.draw, query)
             if not res then GamePrint(tostring(ret)) end
             imgui.End()

@@ -1,0 +1,10 @@
+"workshopitem"
+{
+    "appid"           "881100"
+    "contentfolder"   "/home/kaedenn/.local/share/Steam/steamapps/common/Noita/mods/shift_query"
+    "previewfile"     "/home/kaedenn/.local/share/Steam/steamapps/common/Noita/mods/shift_query/workshop_preview_image.png"
+    "visibility"      "0" // 0=public, 1=friends only, 2=private
+    "title"           "Fungal Shift Query"
+    "description"     ""
+    "publishedfileid" "3132525756"
+}

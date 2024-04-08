@@ -9,26 +9,49 @@
 -- When debugging is enabled and a shift uses a flask for either the
 -- source or destination material, the other material should not have
 -- the "(no flask)" designation, as it's redundant.
+--
+-- TODO:
+--
+-- Move the setting stuff into a class and allow stuff like
+-- Config.previous_count.get()
+-- Config.previous_count.set(num)
+-- or something
 
 dofile_once("data/scripts/lib/utilities.lua")
 dofile_once("mods/shift_query/files/constants.lua")
 
 MOD_ID = "shift_query"
 K_CONFIG_LOG_ENABLE = MOD_ID .. "." .. "q_logging"
+K_CONFIG_FORCE_UPDATE = MOD_ID .. "." .. "q_force_update"
 
--- Return either "Enable" or "Disable" based on the condition
+--[[ Return either "Enable" or "Disable" based on the condition ]]
 function f_enable(cond)
     if cond then return "Enable" end
     return "Disable"
 end
 
--- Print a message to both the game and to the console
+--[[ Trigger a force update ]]
+function q_force_update()
+    GlobalsSetValue(K_CONFIG_FORCE_UPDATE, FLAG_ON)
+end
+
+--[[ Clear the force update flag ]]
+function q_clear_force_update()
+    GlobalsSetValue(K_CONFIG_FORCE_UPDATE, FLAG_OFF)
+end
+
+--[[ True if an update is being forced ]]
+function q_is_update_forced()
+    return GlobalsGetValue(K_CONFIG_FORCE_UPDATE, FLAG_OFF) ~= FLAG_OFF
+end
+
+--[[ Print a message to both the game and to the console ]]
 function q_print(msg)
     GamePrint(msg)
     print(msg)
 end
 
--- Format a "<nu> pending/previous shift(s)" message
+--[[ Format a "<num> pending/previous shift(s)" message ]]
 function f_shift_count(num, label)
     local prefix = tostring(num)
     local suffix = "shifts"
@@ -41,12 +64,12 @@ function f_shift_count(num, label)
     return ("%s %s %s"):format(prefix, label, suffix)
 end
 
--- Returns true if logging is enabled, false otherwise.
+--[[ Returns true if logging is enabled, false otherwise. ]]
 function q_logging()
     return GlobalsGetValue(K_CONFIG_LOG_ENABLE, FLAG_OFF) ~= FLAG_OFF
 end
 
--- Enable or disable logging
+--[[ Enable or disable logging ]]
 function q_set_logging(enable)
     if enable then
         GlobalsSetValue(K_CONFIG_LOG_ENABLE, FLAG_ON)
@@ -55,16 +78,17 @@ function q_set_logging(enable)
         q_log("Disabling debugging")
         GlobalsSetValue(K_CONFIG_LOG_ENABLE, FLAG_OFF)
     end
+    q_force_update()
 end
 
--- Display a logging message if logging is enabled.
+--[[ Display a logging message if logging is enabled. ]]
 function q_log(msg)
     if q_logging() then
         q_print("DEBUG: " .. msg)
     end
 end
 
--- Display a formatted logging message if logging is enabled.
+--[[ Display a formatted logging message if logging is enabled. ]]
 function q_logf(msg, ...)
     if q_logging() then
         q_log(msg:format(...))
@@ -80,6 +104,8 @@ end
 -- The cache allows for these values to appear instantly. Cache entries
 -- are stored when setting a value and cleared once that value is
 -- properly stored.
+--
+-- FIXME: Just use ModSettingGetNextValue; this is unnecessary
 --]]
 local config_cache = {}
 
@@ -107,6 +133,9 @@ function q_setting_set(setting, value)
         new_value = value
     }
     ModSettingSetNextValue(MOD_ID .. "." .. setting, value, false)
+    if old_value ~= value then
+        q_force_update()
+    end
 end
 
 -- Get the "enable gui?" setting's value
@@ -123,24 +152,6 @@ function q_disable_gui()
     q_setting_set(SETTING_ENABLE, false)
 end
 
--- Clear the logging global if set
-function logger_clear()
-    local value = GlobalsGetValue("shift_query.logging") or ""
-    if value ~= "" then
-        GlobalsSetValue("shift_query.logging", "")
-    end
-end
-
--- Add a component to the logging global
-function logger_add(piece)
-    local old_log = GlobalsGetValue("shift_query.logging") or ""
-    local new_log = tostring(piece)
-    if old_log ~= "" then
-        new_log = old_log .. "\n" .. new_log
-    end
-    GlobalsSetValue("shift_query.logging", new_log)
-end
-
 -- Localize a material, either "name" or "$mat_name".
 function localize_material(material)
     local matid = CellFactory_GetType(material)
@@ -148,11 +159,7 @@ function localize_material(material)
     if matid ~= -1 then
         mname = CellFactory_GetUIName(matid)
     end
-    local name = GameTextGetTranslatedOrNot(mname)
-    if not name then -- handle nil
-        return ""
-    end
-    return name
+    return GameTextGetTranslatedOrNot(mname) or ""
 end
 
 -- Localize a material based on the mode argument
@@ -177,13 +184,13 @@ function localize_material_via(material, loc_mode)
     return ("[%s]"):format(material)
 end
 
--- Possibly localize a material based on q_logging, localize setting
+--[[ Possibly localize a material based on q_logging, localize setting ]]
 function maybe_localize_material(material)
     local loc_mode = q_setting_get(SETTING_LOCALIZE)
     return localize_material_via(material, loc_mode)
 end
 
--- Format a material with the possibility of including a flask.
+--[[ Format a material with the possibility of including a flask. ]]
 function flask_or(material, use_flask)
     local logging = q_logging()
     local mname = maybe_localize_material(material)
@@ -196,7 +203,7 @@ function flask_or(material, use_flask)
     return mname
 end
 
--- Format a fungal shift. Returns a table of pairs of strings.
+--[[ Format a fungal shift. Returns a table of pairs of strings. ]]
 function format_shift(shift)
     if not shift then return {{"invalid shift", "invalid shift"}} end
     local source = shift.from
@@ -210,23 +217,23 @@ function format_shift(shift)
         if not target then
             s_target = "no data"
         end
-        return {s_source, s_target}
+        return {{s_source, s_target}}
     end
     local s_target = flask_or(target.material, target.flask)
     local material_pairs = {}
-    if source.name_material then
+    local want_expand = q_setting_get(SETTING_EXPAND)
+    if want_expand == EXPAND_ONE and source.name_material then
         local s_source = flask_or(source.name_material, source.flask)
         table.insert(material_pairs, {s_source, s_target})
     else
-        for index, material in ipairs(source.materials) do
-            local s_source = flask_or(material, source.flask)
-            table.insert(material_pairs, {s_source, s_target})
-        end
+        local s_source = table.concat(source.materials, ", ")
+        s_source = flask_or(s_source, source.flask)
+        table.insert(material_pairs, {s_source, s_target})
     end
     return material_pairs
 end
 
--- Format a number relative to its current value
+--[[ Format a number relative to its current value ]]
 function format_relative(curr, index)
     local term = "invalid"
     if index == curr then
@@ -244,7 +251,7 @@ function format_relative(curr, index)
     return term
 end
 
--- Format a duration of time
+--[[ Format a duration of time ]]
 function format_duration(nsecs)
     local total = math.abs(nsecs)
     local hours = math.floor(total / 60 / 60)
