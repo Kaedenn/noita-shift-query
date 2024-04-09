@@ -10,6 +10,8 @@
 --]]
 
 -- luacheck: globals pick_random_from_table_weighted random_nexti random_create
+-- luacheck: globals random_from_array
+-- luacheck: globals CUTOFF_RARE
 
 dofile("mods/shift_query/files/common.lua")
 matinfo = dofile("mods/shift_query/files/materials.lua")
@@ -44,7 +46,69 @@ end
 function sq_get_abs(iter)
     local mats_from = matinfo.get_materials_from()
     local mats_to = matinfo.get_materials_to()
-    SetRandomSeed(89346, 42345+iter)
+    local greedy_mats = matinfo.get_greedy_materials()
+
+    local mat_from = {}
+    local mat_to = {}
+
+    local converted_any = false
+    local convert_tries = 0
+    while converted_any == false and convert_tries < 20 do
+        local seed2 = 42345 + iter + 1000*convert_tries
+        SetRandomSeed( 89346, seed2 )
+        local rnd = random_create( 9123, seed2 )
+        local from = pick_random_from_table_weighted( rnd, mats_from )
+        local to = pick_random_from_table_weighted( rnd, mats_to )
+
+        mat_from = {
+            flask = false,
+            probability = from.probability,
+            materials = from.materials,
+            name_material = from.name_material or nil
+        }
+        mat_to = {
+            flask = false,
+            probability = to.probability,
+            material = to.material,
+            greedy_mat = nil,
+            grass_holy = "grass"
+        }
+
+        if random_nexti( rnd, 1, 100 ) <= 75 then -- 75% chance to use flask
+            if random_nexti( rnd, 1, 100 ) <= 50 then -- 50% chance which side gets it
+                mat_from.flask = true
+            else
+                mat_to.flask = true
+
+                -- 0.1% chance for gold/grass_holy shifts to work
+                if random_nexti( rnd, 1, 1000 ) ~= 1 then
+                    mat_to.greedy_mat = random_from_array( greedy_mats )
+                    mat_to.grass_holy = "grass"
+                else
+                    mat_to.greedy_mat = "gold"
+                    mat_to.grass_holy = "grass_holy"
+                end
+            end
+        end
+
+        -- Does this attempt work? (NOTE: ignores flasks)
+        for _, mat in ipairs(mat_from.materials) do
+            local from_mat = CellFactory_GetType(mat)
+            local to_mat = CellFactory_GetType(mat_to.material)
+            if from_mat ~= to_mat then
+                converted_any = true
+            end
+        end
+
+        convert_tries = convert_tries + 1
+    end
+
+    if not converted_any then
+        GamePrint(("shift_query - shift %d failed outright"):format(iter))
+    end
+    return {from=mat_from, to=mat_to}
+
+    --[[SetRandomSeed(89346, 42345+iter)
     local rnd = random_create(9123, 58925+iter)
 
     local mat_from = pick_random_from_table_weighted(rnd, mats_from)
@@ -60,7 +124,7 @@ function sq_get_abs(iter)
         end
     end
 
-    return {from=mat_from, to=mat_to}
+    return {from=mat_from, to=mat_to}]]
 end
 
 --[[ Determine if the shift uses a "rare" material
