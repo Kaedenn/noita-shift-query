@@ -19,6 +19,7 @@
 
 dofile_once("data/scripts/lib/utilities.lua")
 dofile_once("mods/shift_query/files/constants.lua")
+smallfolk = dofile_once("mods/shift_query/lib/smallfolk.lua")
 
 MOD_ID = "shift_query"
 K_CONFIG_LOG_ENABLE = MOD_ID .. "." .. "q_logging"
@@ -91,7 +92,13 @@ end
 --[[ Display a formatted logging message if logging is enabled ]]
 function q_logf(msg, ...)
     if q_logging() then
-        q_log(msg:format(...))
+        local args = {...}
+        for idx = 1, #args do
+            if type(args[idx]) == "table" then
+                args[idx] = smallfolk.dumps(args[idx])
+            end
+        end
+        q_log(msg:format(unpack(args)))
     end
 end
 
@@ -152,7 +159,10 @@ function q_disable_gui()
     q_setting_set(SETTING_ENABLE, false)
 end
 
--- Localize a material, either "name" or "$mat_name".
+--[[ Localize a material, either "name" or "$mat_name"
+-- @param material string
+-- @return string
+--]]
 function localize_material(material)
     local matid = CellFactory_GetType(material)
     local mname = material
@@ -162,7 +172,11 @@ function localize_material(material)
     return GameTextGetTranslatedOrNot(mname) or ""
 end
 
--- Localize a material based on the mode argument
+--[[ Localize a material based on the mode argument
+-- @param material string
+-- @param loc_mode string
+-- @return string
+--]]
 function localize_material_via(material, loc_mode)
     if loc_mode == FORMAT_INTERNAL then
         return material
@@ -184,13 +198,20 @@ function localize_material_via(material, loc_mode)
     return ("[%s]"):format(material)
 end
 
---[[ Possibly localize a material based on q_logging, localize setting ]]
+--[[ Possibly localize a material based on q_logging, localize setting
+-- @param material string
+-- @return string
+--]]
 function maybe_localize_material(material)
     local loc_mode = q_setting_get(SETTING_LOCALIZE)
     return localize_material_via(material, loc_mode)
 end
 
---[[ Format a material with the possibility of including a flask ]]
+--[[ Format a material with the possibility of including a flask
+-- @param material string
+-- @param use_flask boolean
+-- @return table|string
+--]]
 function flask_or(material, use_flask)
     local logging = q_logging()
     local mname = maybe_localize_material(material)
@@ -210,7 +231,10 @@ function flask_or(material, use_flask)
     return mname
 end
 
---[[ Format a fungal shift. Returns a table of pairs of strings ]]
+--[[ Format a fungal shift. Returns a table of pairs of strings
+-- @param shift {from=table, to=table}
+-- @return {{string, string}, ...}
+--]]
 function format_shift(shift)
     if not shift then return {{"invalid shift", "invalid shift"}} end
     local source = shift.from
@@ -240,25 +264,46 @@ function format_shift(shift)
     return material_pairs
 end
 
---[[ Format a number relative to its current value ]]
-function format_relative(curr, index)
-    local term = "invalid"
+--[[ Possibly format text with a given color
+-- @param text string
+-- @param color table|string|nil
+-- @return table
+--]]
+function format_color(text, color)
+    if color then
+        return {color=color, text}
+    end
+    return {text}
+end
+
+--[[ Format a number relative to its current value
+-- @param curr number
+-- @param index number
+-- @param colors table|nil
+-- @return table
+--]]
+function format_relative(curr, index, colors)
+    local color = colors or {}
+    local term = format_color("invalid", "red")
     if index == curr then
-        term = "next"
+        term = format_color("next", color.next_shift)
     elseif index > curr then
-        term = ("next+%s"):format(index-curr)
+        term = format_color(("next+%s"):format(index-curr), color.future_shift)
     elseif index == curr - 1 then
-        term = "last"
+        term = format_color("prev", color.last_shift)
     elseif index < curr - 1 then
-        term = ("prev-%s"):format(curr-index-1)
+        term = format_color(("prev-%s"):format(curr-index-1), color.past_shift)
     end
     if q_logging() then
-        term = ("%s[i=%s]"):format(term, index)
+        term[#term] = term[#term] .. ("[i=%s]"):format(index) 
     end
     return term
 end
 
---[[ Format a duration of time ]]
+--[[ Format a duration of time
+-- @param nsecs number
+-- @return string
+--]]
 function format_duration(nsecs)
     local total = math.abs(nsecs)
     local hours = math.floor(total / 60 / 60)

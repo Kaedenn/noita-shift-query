@@ -58,6 +58,12 @@ Feedback = {
     -- The lines table, public for convenience
     lines = {},
 
+    -- The configuration table, private to encourage self:configure
+    _config = {
+        color = true,
+        debug = false,
+    },
+
     -- Create and return a new instance
     init = function(self, imgui)
         self._imgui = imgui
@@ -103,6 +109,7 @@ Feedback = {
 
     -- Convert a given color to a real color
     get_color = function(self, color)
+        if self._config.colors == false then return nil end
         if color == nil then return nil end
         if type(color) == "string" then
             if self.colors[color] then
@@ -124,14 +131,14 @@ Feedback = {
             self._imgui.Text(line)
         elseif type(line) == "table" then
             local color = self:get_color(line.color)
-            if color then
+            if color and self._config.color then
                 self._imgui.PushStyleColor(self._imgui.Col.Text, unpack(color))
             end
             for idx, part in ipairs(line) do
                 if idx > 1 then self._imgui.SameLine() end
                 self:draw_line(part)
             end
-            if color then
+            if color and self._config.color then
                 self._imgui.PopStyleColor()
             end
         else
@@ -150,7 +157,16 @@ Feedback = {
     draw = function(self)
         self:draw_button()
         self:draw_box()
-    end
+    end,
+
+    -- Apply configuration
+    configure = function(self, option, value)
+        if option == "color" then
+            self._config.color = value and true or false
+        elseif option == "debug" then
+            self._config.debug = value and true or false
+        end
+    end,
 }
 
 return Feedback

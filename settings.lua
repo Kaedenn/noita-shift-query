@@ -125,6 +125,14 @@ mod_settings = {
         change_fn = sq_setting_changed,
         scope = MOD_SETTING_SCOPE_RUNTIME,
     },
+    {
+        id = "enable_color",
+        ui_name = "Color Text",
+        ui_description = "Should text be drawn using colors?",
+        value_default = true,
+        change_fn = sq_setting_changed,
+        scope = MOD_SETTING_SCOPE_RUNTIME,
+    },
 }
 
 function ModSettingsUpdate(init_scope)

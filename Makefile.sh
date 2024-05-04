@@ -7,7 +7,7 @@
 # Configure cp command-line arguments and/or behavior
 
 SELF="$(dirname "$0")"
-MOD_NAME="$(basename "$(readlink -f "$(dirname $0)")")"
+MOD_NAME="$(basename "$(readlink -f "$SELF")")"
 
 print_usage() {
   cat <<EOF >&2
@@ -73,6 +73,8 @@ info() { diag "$(color 1 94 INFO)" "$@"; }
 warn() { diag "$(color 1 93 WARNING)" "$@"; }
 debug() { if [[ -n "${DEBUG:-}" ]]; then diag "$(color 1 92 DEBUG)" "$@"; fi; }
 
+get_branch() { git branch --show-current 2>/dev/null; }
+
 dry() { # command...
   if [[ -z "${DRY_RUN:-}" ]]; then
     $@; return $?
@@ -106,6 +108,8 @@ compare_mods() { # local remote
   local diff_args=(${DIFF_ARGS[@]})
   diff_args+=(-x "$(basename "$0")") # because this script isn't required
   diff_args+=(-x "*.tar.gz")         # because backups
+  diff_args+=(-x "ref")              # remove reference items
+  diff_args+=(-x "build")            # remove compilation/bundling stuff
   if [[ -z "${DEBUG:-}" ]]; then
     diff_args+=("-q")
   fi
@@ -187,12 +191,11 @@ archive_path() { # archive-name path
     tar_args+=(cfz)
   fi
   tar_args+=("$tar_file")
+  tar_args+=(-C "$2/..")
   tar_args+=(--exclude .git)
   tar_args+=(--exclude '*.swp')
 
-  pushd "$2/.." >/dev/null
   checked tar ${tar_args[@]} "$(basename "$2")"
-  popd >/dev/null
 }
 
 # Check if this archive is unique among the others in the directory
@@ -200,6 +203,7 @@ archive_is_unique() { # path file
   local file_hash="$(md5sum "$2" | awk '{ print $1 }')"
   local file_name="$(basename "$2")"
   for file in "$1"/*; do
+    if [[ -d "$file" ]]; then continue; fi
     local test_name="$(basename "$file")"
     if [[ "$test_name" != "$file_name" ]]; then
       local test_hash="$(md5sum "$file" | awk '{ print $1 }')"
@@ -210,6 +214,21 @@ archive_is_unique() { # path file
     fi
   done
   return 0
+}
+
+# Copy the files in the current repo to the dest directory
+deploy() { # dest
+  local dest="$1"
+  git ls-tree -r --name-only $(git branch --show-current) | while read entry; do
+    local dpath="$(dirname "$entry")"
+    info "Replicating $entry to $dest/$entry"
+    if [[ -n "$dpath" ]] && [[ "$dpath" != "." ]]; then
+      if [[ ! -d "$dest/$dpath" ]]; then
+        dry checked mkdir -p "$dest/$dpath"
+      fi
+    fi
+    dry checked cp "$entry" "$dest/$entry"
+  done
 }
 
 NOITA="$(find_noita)"
@@ -247,7 +266,7 @@ if [[ "$ACTION" == "cp" ]]; then
   # Deploy this mod to the destination directory
   if dry checked rm -r "$DEST_DIR"; then
     mkdir "$DEST_DIR" 2>/dev/null
-    if dry checked cp -r "$SELF/*" "$DEST_DIR"; then
+    if checked deploy "$DEST_DIR"; then
       info "Done"
     fi
   fi
@@ -256,4 +275,4 @@ else
   info "Execute '$0 [ARGS...] cp' to deploy $MOD_NAME"
 fi
 
-
+# vim: set ts=2 sts=2 sw=2:

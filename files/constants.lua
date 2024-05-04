@@ -7,8 +7,12 @@ ALL_SHIFTS = -1     -- values < 0 mean "all"
 
 CUTOFF_RARE = 0.2   -- shifts with this probability or lower are "rare"
 
-FLAG_ON = "1"
-FLAG_OFF = "0"
+FLAG_ON = "1"       -- GlobalsSetValue/GlobalsGetValue "true"
+FLAG_OFF = "0"      -- GlobalsSetValue/GlobalsGetValue "false"
+
+--[[ The two secret materials ]]
+MAT_AP = "midas_precursor"
+MAT_LC = "magic_liquid_hp_regeneration_unstable"
 
 --[[ Settings ]]
 MOD_ID = "shift_query"
@@ -20,6 +24,7 @@ SETTING_ENABLE = "enable"
 SETTING_EXPAND = "expand_from"
 SETTING_APLC = "include_aplc"
 SETTING_REAL = "flask_real"
+SETTING_COLOR = "enable_color"
 
 CONF_PREVIOUS = ("%s.%s"):format(MOD_ID, SETTING_PREVIOUS)
 CONF_NEXT = ("%s.%s"):format(MOD_ID, SETTING_NEXT)
@@ -28,6 +33,7 @@ CONF_ENABLE = ("%s.%s"):format(MOD_ID, SETTING_ENABLE)
 CONF_EXPAND = ("%s.%s"):format(MOD_ID, SETTING_EXPAND)
 CONF_APLC = ("%s.%s"):format(MOD_ID, SETTING_APLC)
 CONF_REAL = ("%s.%s"):format(MOD_ID, SETTING_REAL)
+CONF_COLOR = ("%s.%s"):format(MOD_ID, SETTING_COLOR)
 
 --[[ Material formatting rules ]]
 FORMAT_INTERNAL = "internal"

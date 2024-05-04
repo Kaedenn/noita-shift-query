@@ -1,4 +1,4 @@
--- Fungal Query by Kaedenn
+-- Fungal Shift Query by Kaedenn
 --
 -- This mod lets you query past and pending fungal shifts both
 -- _accurately_ and _safely_.
@@ -22,17 +22,16 @@
 -- Add either flask or pouch icon next to each material with the
 -- material's CellData color (parse "data/materials.xml").
 --
+-- Allow usage without Noita-Dear-ImGui using an alternate GUI library.
+-- Can use gusgui from https://github.com/ofoxsmith/gusgui
+--
 -- Add "fungal_shift_ui_icon" to the ImGui window.
 
 dofile_once("mods/shift_query/files/common.lua")
 dofile_once("mods/shift_query/files/query.lua")
-dofile_once("mods/shift_query/lib/feedback.lua")
+dofile_once("mods/shift_query/files/lib/feedback.lua")
 dofile_once("mods/shift_query/files/constants.lua")
 APLC = dofile_once("mods/shift_query/files/aplc.lua")
---nxml = dofile_once("mods/shift_query/lib/nxml.lua")
-
-MAT_AP = "midas_precursor"
-MAT_LC = "magic_liquid_hp_regeneration_unstable"
 
 RARE_MAT_COLOR = Feedback.colors.yellow_light
 
@@ -99,12 +98,14 @@ SQ = {
         q_logf("query(%d)", index)
         local iter = get_curr_iter()
         local shift = sq_get_abs(index)
-        local which_msg = format_relative(iter, index)
+        local which_msg = format_relative(iter, index, {
+            next_shift="green",
+            future_shift="cyan",
+            last_shift="magenta",
+            past_shift="red_light",
+        })
         for idx, pair in ipairs(format_shift(shift)) do
-            q_logf("pair[%d]={%q, %q}", idx, pair[1], pair[2])
-            -- To disable colors (for rare shift annotation), comment out the
-            -- code below and un-comment the following line.
-            --self._fb:add(("%s shift is %s -> %s"):format(which_msg, pair[1], pair[2]))
+            q_logf("pair[%d]={%s, %s}", idx, pair[1], pair[2])
             local rare_from, rare_to = sq_is_rare_shift(shift, nil)
             local str_from = pair[1]
             local str_to = pair[2]
@@ -119,7 +120,8 @@ SQ = {
                 {color="lightgray", "shift is"},
                 str_from,
                 {color="lightgray", "->"},
-                str_to})
+                str_to
+            })
         end
     end,
 
@@ -202,8 +204,8 @@ SQ = {
         return nil
     end,
 
-    --[[ Draw the menu bar ]]
-    draw_menu = function(self)
+    --[[ Draw the menu bar using Noita-Dear-Imgui ]]
+    draw_menu_imgui = function(self)
         if self._imgui.BeginMenuBar() then
             if self._imgui.BeginMenu("Actions") then
                 if self._imgui.MenuItem("Refresh") then
@@ -253,10 +255,6 @@ SQ = {
                 end
 
                 self._imgui.Separator()
-                local log_str = f_enable(not q_logging())
-                if self._imgui.MenuItem(log_str .. " Debugging") then
-                    q_set_logging(not q_logging())
-                end
                 if self._imgui.MenuItem("Clear") then
                     self._fb:clear()
                 end
@@ -268,6 +266,7 @@ SQ = {
             end
 
             if self._imgui.BeginMenu("Display") then
+                local item_str
                 if self._imgui.BeginMenu("Prior Shifts") then
                     if self._imgui.MenuItem("Show All") then
                         q_setting_set(SETTING_PREVIOUS, tostring(ALL_SHIFTS))
@@ -287,14 +286,24 @@ SQ = {
                     self._imgui.EndMenu()
                 end
 
+                self._imgui.Separator()
+                item_str = f_enable(not q_logging())
+                if self._imgui.MenuItem(item_str .. " Debugging") then
+                    q_set_logging(not q_logging())
+                end
+                item_str = f_enable(not q_setting_get(SETTING_COLOR))
+                if self._imgui.MenuItem(item_str .. " Colors") then
+                    q_setting_set(SETTING_COLOR, not q_setting_get(SETTING_COLOR))
+                end
+
                 self._imgui.EndMenu()
             end
             self._imgui.EndMenuBar()
         end
     end,
 
-    --[[ Draw the main window ]]
-    draw_window = function(self)
+    --[[ Draw the main window using Notia-Dear-ImGui ]]
+    draw_window_imgui = function(self)
         local iter = get_curr_iter()
 
         if self:check_update() then
@@ -302,16 +311,17 @@ SQ = {
         end
 
         -- Draw the current shift iteration
-        self._imgui.Text(("Shift: %s;"):format(iter))
+        self._imgui.Text(("Shift: %s"):format(iter))
 
-        self._imgui.SameLine()
-
-        -- Draw the current shift cooldown
-        local cooldown = self:format_cooldown()
-        if cooldown ~= nil then
-            self._imgui.Text(("Cooldown: %s"):format(cooldown))
-        else
-            self._imgui.Text("Cooldown finished")
+        -- Draw the current shift cooldown (if there's been a shift)
+        if iter > 0 then
+            self._imgui.SameLine()
+            local cooldown = self:format_cooldown()
+            if cooldown ~= nil then
+                self._imgui.Text(("; Cooldown: %s"):format(cooldown))
+            else
+                self._imgui.Text("; Cooldown finished")
+            end
         end
 
         -- Display what shifts the user has requested
@@ -333,14 +343,20 @@ SQ = {
             end
         end
 
+        self._fb:configure("color", q_setting_get(SETTING_COLOR))
         self._fb:draw_box()
     end,
 
-    --[[ Draw everything ]]
+    --[[ Draw everything using Noita-Dear-Imgui ]]
+    draw_imgui = function(self)
+        self:draw_menu_imgui()
+        self:draw_window_imgui()
+    end,
+
+    --[[ Draw everything using the appropriate GUI library ]]
     draw = function(self)
-        self:draw_menu()
-        self:draw_window()
-    end
+        self:draw_imgui()
+    end,
 }
 
 imgui = nil
@@ -352,16 +368,6 @@ function OnModPostInit()
     if load_imgui then
         imgui = load_imgui({version="1.3.0", mod="FungalShiftQuery"})
         query = SQ:new(imgui)
-    end
-
-    -- Fix problem with contradicting localize options (boolean / string)
-    local localize = q_setting_get(SETTING_LOCALIZE)
-    if localize ~= FORMAT_LOCALE then
-        if localize ~= FORMAT_INTERNAL then
-            if localize ~= FORMAT_BOTH then
-                q_setting_set(SETTING_LOCALIZE, FORMAT_LOCALE)
-            end
-        end
     end
 end
 
