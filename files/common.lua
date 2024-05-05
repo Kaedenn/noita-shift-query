@@ -19,7 +19,7 @@
 
 dofile_once("data/scripts/lib/utilities.lua")
 dofile_once("mods/shift_query/files/constants.lua")
-smallfolk = dofile_once("mods/shift_query/lib/smallfolk.lua")
+smallfolk = dofile_once("mods/shift_query/files/lib/smallfolk.lua")
 
 MOD_ID = "shift_query"
 K_CONFIG_LOG_ENABLE = MOD_ID .. "." .. "q_logging"

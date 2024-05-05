@@ -5,8 +5,11 @@
 --    local fb = Feedback:init(imgui)
 --    fb:add("this is a string")
 --    fb:addf("this is a %s", "string")
+--    fb:add({"this text is red", color="red'})
 --    fb:prependf("below are %d lines", fb:count())
 --    fb:draw()
+--
+--    fb:draw_box() -- Draw without the Clear button
 --
 -- API:
 --    fb = Feedback:init(imgui)
@@ -29,6 +32,29 @@
 --        Draw the text box with all of its contents
 --    fb:draw()
 --        Calls self:draw_button() and self:draw_box()
+--    fb:configure("color", true|false)
+--        Enable or disable colors (default is enabled)
+--    fb:configure("debug", true|false)
+--        Enable or disable debugging (default is disabled)
+--
+-- Lines are either strings or tables with the following structure
+--    line[idx] = string                one or more words
+--    line.color = one of
+--        Feedback.colors.<name>        predefined color
+--        "name"                        name of predefined color
+--        {number, number, number}      custom RGB color
+-- Lines can be nested recursively as so
+fb:add({
+   {"This", color="red"},
+   "line",
+   {
+     "has",                          -- red
+     {"multiple", color="green"},    -- green
+     "different",                    -- red
+     color="red",
+   },
+   {"colors", color={0.75, 0.75, 1}}
+})
 --]]
 
 Feedback = {
