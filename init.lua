@@ -101,7 +101,6 @@ SQ = {
         local which_msg = format_relative(iter, index, {
             next_shift="green",
             future_shift="cyan",
-            last_shift="magenta",
             past_shift="red_light",
         })
         for idx, pair in ipairs(format_shift(shift)) do
@@ -318,9 +317,9 @@ SQ = {
             self._imgui.SameLine()
             local cooldown = self:format_cooldown()
             if cooldown ~= nil then
-                self._imgui.Text(("; Cooldown: %s"):format(cooldown))
+                self._imgui.Text(("Cooldown: %s"):format(cooldown))
             else
-                self._imgui.Text("; Cooldown finished")
+                self._imgui.Text("Cooldown finished")
             end
         end
 

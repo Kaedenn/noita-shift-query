@@ -290,7 +290,7 @@ function format_relative(curr, index, colors)
     elseif index > curr then
         term = format_color(("next+%s"):format(index-curr), color.future_shift)
     elseif index == curr - 1 then
-        term = format_color("prev", color.last_shift)
+        term = format_color("prev", color.last_shift or color.past_shift)
     elseif index < curr - 1 then
         term = format_color(("prev-%s"):format(curr-index-1), color.past_shift)
     end
