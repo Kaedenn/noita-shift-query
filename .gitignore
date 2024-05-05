@@ -3,7 +3,8 @@
 .*.swo
 
 # Artifacts
-build/*.zip
+build/*
+!build/*.sh
 
 # Compiled Lua sources
 luac.out
