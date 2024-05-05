@@ -5,6 +5,8 @@
 # Artifacts
 build/*
 !build/*.sh
+!build/*.txt
+!build/shift_query.vdf
 
 # Compiled Lua sources
 luac.out
