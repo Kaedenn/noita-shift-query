@@ -1,3 +1,6 @@
+# Reference items
+ref/
+
 # Temporary files
 .*.swp
 .*.swo
@@ -6,7 +9,7 @@
 build/*
 !build/*.sh
 !build/*.txt
-!build/shift_query.vdf
+!build/*.vdf
 
 # Compiled Lua sources
 luac.out
