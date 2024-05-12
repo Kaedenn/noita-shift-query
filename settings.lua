@@ -1,7 +1,7 @@
 --[[
 -- Configuration script for the Fungal Shift Query mod
 --
--- Changing any setting (other than enable) triggers a force update.
+-- Changing any setting triggers a force update.
 --
 -- Note that this script cannot reference any file in the mods/ directory, as
 -- the virtual filesystem is not yet initialized by the time this script runs.
@@ -119,8 +119,22 @@ mod_settings = {
     },
     {
         id = "flask_real",
-        ui_name = "Resolve Flasks",
+        ui_name = "Show Shift Log",
         ui_description = "Show a log of past shifts with flasks resolved to the real material",
+        value_default = false,
+        change_fn = sq_setting_changed,
+        scope = MOD_SETTING_SCOPE_RUNTIME,
+    },
+    {
+        id = "show_greedy",
+        ui_name = "Show Greedy Shifts",
+        ui_description = [[
+Show what material attempting to shift to gold would become. Attempting
+to shift a material to gold has a 0.1% chance to succeed, with 99.9% of
+attempts converting the source material to a random "greedy" material.
+This option will display that material. Note that successful greedy
+shifts are always displayed. Successful greedy shifts will also convert
+materials to Holy Grass, if held.]],
         value_default = false,
         change_fn = sq_setting_changed,
         scope = MOD_SETTING_SCOPE_RUNTIME,

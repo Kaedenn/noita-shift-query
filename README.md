@@ -34,7 +34,6 @@ The `Actions` menu contains the following items:
   * `Enable/Disable Debugging` Toggle debugging. This causes the output to include slightly more information.
   * `Clear` Clears the UI text content.
   * `Close` Closes the UI. This just sets the `Enable UI` setting to false.
-  * `Do Custom Shift` (TODO: WIP) Force a custom shift, outside of the game's normal shift routine. This allows you to shift any two arbitrary materials, even those not normally shiftable.
 
 ## Settings
 

@@ -36,6 +36,11 @@ APLC = dofile_once("mods/shift_query/files/aplc.lua")
 RARE_MAT_COLOR = Feedback.colors.yellow_light
 
 SQ = {
+    mat_colors = {
+        midas_precursor = {0.14, 0.24, 1},
+        magic_liquid_hp_regeneration_unstable = {0.63, 0.95, 0.5},
+    },
+
     new = function(self, imgui)
         self._imgui = imgui
         self._fb = Feedback:init(imgui)
@@ -81,7 +86,8 @@ SQ = {
         local mat1 = maybe_localize_material(combo[1])
         local mat2 = maybe_localize_material(combo[2])
         local mat3 = maybe_localize_material(combo[3])
-        self._fb:addf("%s is (%d%% success rate)", result, prob)
+        local color = self.mat_colors[mat] or {1, 1, 1}
+        self._fb:add({{result, color=color}, ("is (%d%% success rate)"):format(prob)})
         local mode = q_setting_get(SETTING_LOCALIZE)
         if mode == FORMAT_INTERNAL then
             self._fb:addf("  %s, %s, %s", mat1, mat2, mat3)
@@ -114,6 +120,7 @@ SQ = {
             if rare_to then
                 str_to = {color=RARE_MAT_COLOR, pair[2]}
             end
+
             self._fb:add({
                 which_msg, 
                 {color="lightgray", "shift is"},
@@ -121,6 +128,21 @@ SQ = {
                 {color="lightgray", "->"},
                 str_to
             })
+            local show_greed = false
+            if shift.to.flask then
+                if shift.to.greedy_mat == "gold" then show_greed = true end
+                if q_setting_get(SETTING_GREED) then show_greed = true end
+            end
+            if show_greed then
+                self._fb:add({
+                    which_msg,
+                    {color="lightgray", "greedy shift is"},
+                    str_from,
+                    {color="lightgray", "->"},
+                    {color="yellow", shift.to.greedy_mat},
+                    {color="lightgray", "when holding a pouch of gold"},
+                })
+            end
         end
     end,
 
@@ -242,21 +264,22 @@ SQ = {
                 end
 
                 self._imgui.Separator()
-                local real_str = f_enable(not q_setting_get(SETTING_REAL))
-                if self._imgui.MenuItem(real_str .. " Flask Resolving") then
+                local real_str = f_show(not q_setting_get(SETTING_REAL))
+                if self._imgui.MenuItem(real_str .. " Shift Log") then
                     q_setting_set(SETTING_REAL, not q_setting_get(SETTING_REAL))
                 end
 
-                self._imgui.Separator()
-                local aplc_str = f_enable(not q_setting_get(SETTING_APLC))
+                local aplc_str = f_show(not q_setting_get(SETTING_APLC))
                 if self._imgui.MenuItem(aplc_str .. " AP/LC Recipes") then
                     q_setting_set(SETTING_APLC, not q_setting_get(SETTING_APLC))
                 end
 
-                self._imgui.Separator()
-                if self._imgui.MenuItem("Clear") then
-                    self._fb:clear()
+                local greed_str = f_show(not q_setting_get(SETTING_GREED))
+                if self._imgui.MenuItem(greed_str .. " Greedy Shifts") then
+                    q_setting_set(SETTING_GREED, not q_setting_get(SETTING_GREED))
                 end
+
+                self._imgui.Separator()
                 if self._imgui.MenuItem("Close") then
                     GamePrint("UI closed; re-open using the Mod Settings window")
                     q_disable_gui()
@@ -311,10 +334,10 @@ SQ = {
 
         -- Draw the current shift iteration
         self._imgui.Text(("Shift: %s"):format(iter))
+        self._imgui.SameLine()
 
         -- Draw the current shift cooldown (if there's been a shift)
         if iter > 0 then
-            self._imgui.SameLine()
             local cooldown = self:format_cooldown()
             if cooldown ~= nil then
                 self._imgui.Text(("Cooldown: %s"):format(cooldown))
@@ -373,6 +396,11 @@ end
 -- The actual driving code, executed once per frame after world update
 function OnWorldPostUpdate()
     local ready = q_get_enabled()
+
+    if not imgui and load_imgui then
+        -- ImGui wasn't loaded, but is now
+        OnModPostInit()
+    end
 
     if not imgui then
         GamePrint(table.concat({

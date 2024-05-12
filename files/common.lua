@@ -31,6 +31,12 @@ function f_enable(cond)
     return "Disable"
 end
 
+--[[ As above, but for "Show" or "Hide" ]]
+function f_show(cond)
+    if cond then return "Show" end
+    return "Hide"
+end
+
 --[[ Trigger a force update ]]
 function q_force_update()
     GlobalsSetValue(K_CONFIG_FORCE_UPDATE, FLAG_ON)

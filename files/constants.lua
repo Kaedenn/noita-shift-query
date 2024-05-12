@@ -24,6 +24,7 @@ SETTING_ENABLE = "enable"
 SETTING_EXPAND = "expand_from"
 SETTING_APLC = "include_aplc"
 SETTING_REAL = "flask_real"
+SETTING_GREED = "show_greedy"
 SETTING_COLOR = "enable_color"
 
 CONF_PREVIOUS = ("%s.%s"):format(MOD_ID, SETTING_PREVIOUS)
@@ -33,6 +34,7 @@ CONF_ENABLE = ("%s.%s"):format(MOD_ID, SETTING_ENABLE)
 CONF_EXPAND = ("%s.%s"):format(MOD_ID, SETTING_EXPAND)
 CONF_APLC = ("%s.%s"):format(MOD_ID, SETTING_APLC)
 CONF_REAL = ("%s.%s"):format(MOD_ID, SETTING_REAL)
+CONF_GREED = ("%s.%s"):format(MOD_ID, SETTING_GREED)
 CONF_COLOR = ("%s.%s"):format(MOD_ID, SETTING_COLOR)
 
 --[[ Material formatting rules ]]
