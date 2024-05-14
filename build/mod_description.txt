@@ -1,22 +1,38 @@
-What are the fungal shifts for this seed? Which shifts will use a flask?
+What are the fungal shifts for this seed? Which shifts will use a flask? What's the Alchemic Precursor recipe? What's the Lively Concoction recipe?
 
 This mod will tell you exactly these. It lists all pending shifts (configurable) using either the internal material name or your localized name (also configurable).
 
 If a shift mentions using a flask, then a flask or pouch will be used, assuming you're holding one. If a flask isn't mentioned, then the shift won't use one.
 
-**NEW!** Updated with Epilogue 2 changes (new algorithm, new material "mammy").
-**NEW!** Option to display greedy shifts (attempting to shift something to gold). Successful greedy shifts are always displayed.
-**NEW!** The word "flask" is highlighted cyan.
-**NEW!** Shifts using "rare" materials are highlighted yellow.
-**NEW!** Formatting of multi-material shifts (configurable) to include all materials instead of just the primary one.
-**NEW!** Alchemic precursor and lively concoction are now included! The number next to the materials is the conversion chance. A higher number means a more effective conversion.
-**NEW!** Flask resolving! If enabled via the Actions menu, this mod will tell you exactly what materials have been shifted, even if a flask was used.
-**NEW!** Live feedback for shift delay period! This mod will tell you exactly how many seconds remain before you can perform another fungal shift.
+This mod requires Noita-Dear-ImGui, which requires unsafe mods to be enabled. Download that here: https://github.com/dextercd/Noita-Dear-ImGui/releases
 
-Alchemic Precursor / Lively Concoction behavior: These recipes are randomly generated every seed and take three random materials to generate Alchemic Precursor or Lively Concoction. The behavior is as follows:
+This mod benefits tremendously from GrahamBurger's wonderful Less Inaccuracies mod. Download that here: https://steamcommunity.com/sharedfiles/filedetails/?id=2963870452
+
+** Features **
+
+* Accurate flask/pouch indication: if a shift mentions a flask, then a flask or pouch will be used, assuming you're holding one with something in it.
+* Option to display a limited subset of shifts (all, previous, current, next, next two, etc).
+* Option to display greedy shifts (successful greedy shifts are always displayed) (see "Greedy Shifts" below).
+* Option to display either all or the primary shift material for multi-material shifts.
+* Option to enable or disable Alchemic Precursor and Lively Concoction recipes (see "Alchemic Precursor and Lively Concoction" below).
+* Option to show you exactly what materials have been shifted.
+* Option to show a material's internal name, localized name, or both. Note that localized names change with fungal shifts (this is how fungal shifts work) so be careful if you pick that option.
+* Live feedback for shift grace period between consecutive shifts.
+
+** Greedy Shifts **
+
+Attempting to shift a material to gold or Holy Grass only has a 0.1% (1/1000) chance of succeeding. Most of the time you'll get one of the "greedy" materials. Successful greedy shifts are always displayed and this shift can be used to obtain large amounts of gold or Holy Grass.
+
+The greedy materials are: brass, silver, toxic sludge, pea soup, flammable gas, poo, mammi, toxic meat, and vomit. Most of the time, attempting to shift a material to gold or Holy Grass will instead shift it to one of these.
+
+** Alchemic Precursor and Lively Concoction **
+
+These recipes are randomly generated every seed and take three random materials to generate Alchemic Precursor or Lively Concoction. The behavior is as follows:
 Material_2, in the presence of Material_1 and Material_3, has a N percent chance to become Alchemic Precursor or Lively Concoction. Therefore, you want a large amount of the second material and a small amount of the first and third materials. A higher conversion percentage results in a more efficient conversion.
 
-This mod requires Noita-Dear-ImGui, which requires unsafe mods to be enabled. Download that here: https://github.com/dextercd/Noita-Dear-ImGui/releases
+For example, the Alchemic Precursor recipe of "mud, water, oil" will convert large quantities of water to Alchemic Precursor in the presence of both mud and oil.
+
+** Note on Failed Shifts **
 
 If you see the message "shift_query - shift <number> failed outright", then *please* send me a message with your seed number. Mathematically speaking this message should be practically impossible, but I don't have the patience to determine that probability.
 
