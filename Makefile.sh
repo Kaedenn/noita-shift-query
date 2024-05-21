@@ -11,7 +11,7 @@ MOD_NAME="$(basename "$(readlink -f "$SELF")")"
 
 print_usage() {
   cat <<EOF >&2
-usage: $0 [-h] [-v|-V] [-n] [-b DIR] [-C] [-N DIR] [-a ARG] [ACTION]
+usage: $0 [-h] [-v|-V] [-n] [-b DIR] [-C] [-F] [-N DIR] [-a ARG] [ACTION]
 
 actions:
     diff    compare local and deployed versions of this mod (default)
@@ -24,6 +24,7 @@ options:
     -n      dry run; don't actually do anything
     -b DIR  backup destination into DIR/ before overwriting
     -C      disable color formatting
+    -F      copy items even if there are no detected differences
     -N DIR  specify path to Noita game directory
     -a ARG  prepend ARG to the diff command-line
 
@@ -36,7 +37,7 @@ EOF
 NOITA_PATH="${NOITA:-}"
 declare -a DIFF_ARGS=()
 
-while getopts "hvVnb:CN:a:" arg; do
+while getopts "hvVnb:CFN:a:" arg; do
   case "$arg" in
     h) print_usage; exit 0;;
     v) DEBUG=1;;
@@ -44,6 +45,7 @@ while getopts "hvVnb:CN:a:" arg; do
     b) BACKUP="$OPTARG";;
     n) DRY_RUN=1;;
     C) NOCOLOR=1;;
+    F) FORCE_COPY=1;;
     N) NOITA_PATH="$OPTARG";;
     a) DIFF_ARGS+=("$OPTARG");;
   esac
@@ -216,10 +218,18 @@ archive_is_unique() { # path file
   return 0
 }
 
+# Check if we should skip deploying the given object
+deploy_check_skip() { # path
+  if [[ $1 == build ]]; then return 0; fi
+  if [[ $1 =~ build/.* ]]; then return 0; fi
+  return 1
+}
+
 # Copy the files in the current repo to the dest directory
 deploy() { # dest
   local dest="$1"
   git ls-tree -r --name-only $(git branch --show-current) | while read entry; do
+    deploy_check_skip $entry && continue
     local dpath="$(dirname "$entry")"
     info "Replicating $entry to $dest/$entry"
     if [[ -n "$dpath" ]] && [[ "$dpath" != "." ]]; then
@@ -243,12 +253,15 @@ debug "Comparing . (as $MOD_NAME) with $DEST_DIR"
 compare_mods "$SELF" "$DEST_DIR"
 DIFF_STATUS=$?
 
-if [[ $DIFF_STATUS -eq 0 ]]; then
+if [[ $DIFF_STATUS -ne 0 ]]; then
+  info "Detected differences between local and deployed directories"
+elif [[ -n "${FORCE_COPY:-}" ]]; then
+  info "No differences detected, but copying anyway"
+else
   info "No differences detected"
   exit 0
 fi
 
-info "Detected differences between local and deployed directories"
 if [[ "$ACTION" == "cp" ]]; then
 
   # Should we create a backup of the deployed directory?
@@ -264,7 +277,10 @@ if [[ "$ACTION" == "cp" ]]; then
 
   info "Copying . to $DEST_DIR"
   # Deploy this mod to the destination directory
-  if dry checked rm -r "$DEST_DIR"; then
+  if [[ -d "$DEST_DIR" ]]; then
+    dry checked rm -r "$DEST_DIR"
+  fi
+  if [[ $? -eq 0 ]]; then
     mkdir "$DEST_DIR" 2>/dev/null
     if checked deploy "$DEST_DIR"; then
       info "Done"
