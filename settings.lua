@@ -7,6 +7,10 @@
 -- the virtual filesystem is not yet initialized by the time this script runs.
 -- Therefore, all values in files/common.lua and files/constants.lua are
 -- instead hard-coded here.
+--
+-- The minimum value for the shift count settings is -0.5 rather than -1,
+-- because there is (currently) no way to force a numeric setting to have
+-- integer values. Specifying -1 results in the minimum appearing as -2.
 --]]
 
 dofile_once("data/scripts/lib/utilities.lua")
@@ -49,40 +53,46 @@ function sq_setting_changed( mod_id, gui, in_main_menu, setting, old_value, new_
     end
 end
 
-mod_settings_version = 5
+mod_settings_version = 6
 mod_settings = {
     -- luacheck: globals MOD_SETTING_SCOPE_RUNTIME
     {
         id = "enable",
         ui_name = "Enable UI",
-        ui_description = "Display GUI",
+        ui_description = "Closing the GUI through the Actions menu will uncheck this option.",
         value_default = true,
         change_fn = sq_setting_changed,
         scope = MOD_SETTING_SCOPE_RUNTIME,
     },
     {
-        id = "previous_count",
-        ui_name = "Previous count",
-        ui_description = "How many previous shifts should we display? (-1 = all)",
-        value_default = 0,
-        value_min = -0.5,
-        value_max = 20,
-        value_display_multiplier = 1,
-        change_fn = sq_setting_changed,
-        ui_fn = sq_mod_shift_range,
-        scope = MOD_SETTING_SCOPE_RUNTIME,
-    },
-    {
-        id = "next_count",
-        ui_name = "Next count",
-        ui_description = "How many pending shifts should we display? (-1 = all)",
-        value_default = 20,
-        value_min = -0.5,
-        value_max = 20,
-        value_display_multiplier = 1,
-        change_fn = sq_setting_changed,
-        ui_fn = sq_mod_shift_range,
-        scope = MOD_SETTING_SCOPE_RUNTIME,
+        category_id = "shift_range",
+        ui_name = "Shift Display",
+        settings = {
+            {
+                id = "previous_count",
+                ui_name = "Previous count",
+                ui_description = "How many previous shifts should we display? (-1 = all)",
+                value_default = 0,
+                value_min = -0.5,   -- See comment at the top of the file
+                value_max = 20,
+                value_display_multiplier = 1,
+                change_fn = sq_setting_changed,
+                ui_fn = sq_mod_shift_range,
+                scope = MOD_SETTING_SCOPE_RUNTIME,
+            },
+            {
+                id = "next_count",
+                ui_name = "Next count",
+                ui_description = "How many pending shifts should we display? (-1 = all)",
+                value_default = 20,
+                value_min = -0.5, -- See comment at the top of the file
+                value_max = 20,
+                value_display_multiplier = 1,
+                change_fn = sq_setting_changed,
+                ui_fn = sq_mod_shift_range,
+                scope = MOD_SETTING_SCOPE_RUNTIME,
+            },
+        },
     },
     {
         id = "localize",
@@ -92,58 +102,80 @@ mod_settings = {
         values = {
             {"locale", "Translated Name"},
             {"internal", "Internal Name"},
-            {"both", "Both"},
+            {"both", "Both Translated and Internal Names"},
         },
         change_fn = sq_setting_changed,
         scope = MOD_SETTING_SCOPE_RUNTIME,
     },
     {
-        id = "expand_from",
-        ui_name = "Expand sources?",
-        ui_description = "Show all source materials, or just the primary one?",
-        value_default = "one",
-        values = {
-            {"one", "Primary Material"},
-            {"all", "All Materials"},
-        },
-        change_fn = sq_setting_changed,
-        scope = MOD_SETTING_SCOPE_RUNTIME,
-    },
-    {
-        id = "include_aplc",
-        ui_name = "Include AP / LC recipes",
-        ui_description = "Include Alchemic Precursor and Lively Concoction recipes",
-        value_default = false,
-        change_fn = sq_setting_changed,
-        scope = MOD_SETTING_SCOPE_RUNTIME,
-    },
-    {
-        id = "flask_real",
-        ui_name = "Show Shift Log",
-        ui_description = "Show a log of past shifts with flasks resolved to the real material",
-        value_default = false,
-        change_fn = sq_setting_changed,
-        scope = MOD_SETTING_SCOPE_RUNTIME,
-    },
-    {
-        id = "show_greedy",
-        ui_name = "Show Greedy Shifts",
-        ui_description = [[
+        category_id = "display_features",
+        ui_name = "Features",
+        settings = {
+            {
+                id = "expand_from",
+                ui_name = "Expand Sources",
+                ui_description = "Show all source materials, or just the primary one?",
+                value_default = "one",
+                values = {
+                    {"one", "Primary Material"},
+                    {"all", "All Materials"},
+                },
+                change_fn = sq_setting_changed,
+                scope = MOD_SETTING_SCOPE_RUNTIME,
+            },
+            {
+                id = "include_aplc",
+                ui_name = "Include AP / LC Recipes",
+                ui_description = "Include Alchemic Precursor and Lively Concoction recipes",
+                value_default = true,
+                change_fn = sq_setting_changed,
+                scope = MOD_SETTING_SCOPE_RUNTIME,
+            },
+            {
+                id = "flask_real",
+                ui_name = "Show Shift Log",
+                ui_description = "Show a log of past shifts with flasks resolved to the real material",
+                value_default = false,
+                change_fn = sq_setting_changed,
+                scope = MOD_SETTING_SCOPE_RUNTIME,
+            },
+            {
+                id = "show_greedy",
+                ui_name = "Show Greedy Shifts",
+                ui_description = [[
 Show what material attempting to shift to gold would become. Attempting
 to shift a material to gold has a 0.1% chance to succeed, with 99.9% of
 attempts converting the source material to a random "greedy" material.
 This option will display that material. Note that successful greedy
 shifts are always displayed. Successful greedy shifts will also convert
 materials to Holy Grass, if held.]],
-        value_default = false,
+                value_default = false,
+                change_fn = sq_setting_changed,
+                scope = MOD_SETTING_SCOPE_RUNTIME,
+            },
+        },
+    },
+    {
+        id = "enable_color",
+        ui_name = "Enable Color Text",
+        ui_description = "Should text be drawn using colors?",
+        value_default = true,
         change_fn = sq_setting_changed,
         scope = MOD_SETTING_SCOPE_RUNTIME,
     },
     {
-        id = "enable_color",
-        ui_name = "Color Text",
-        ui_description = "Should text be drawn using colors?",
+        id = "enable_images",
+        ui_name = "Enable Material Images",
+        ui_description = "Show material texture icons next to each material",
         value_default = true,
+        change_fn = sq_setting_changed,
+        scope = MOD_SETTING_SCOPE_RUNTIME,
+    },
+    {
+        id = "terse",
+        ui_name = "Terse Mode",
+        ui_description = "Remove unnecessary text to make messages shorter",
+        value_default = false,
         change_fn = sq_setting_changed,
         scope = MOD_SETTING_SCOPE_RUNTIME,
     },

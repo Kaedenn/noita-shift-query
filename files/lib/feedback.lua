@@ -6,6 +6,7 @@
 --    fb:add("this is a string")
 --    fb:addf("this is a %s", "string")
 --    fb:add({"this text is red", color="red'})
+--    fb:add({"this text has an image", image="data/materials_gfx/fungi.png"})
 --    fb:prependf("below are %d lines", fb:count())
 --    fb:draw()
 --
@@ -36,6 +37,8 @@
 --        Enable or disable colors (default is enabled)
 --    fb:configure("debug", true|false)
 --        Enable or disable debugging (default is disabled)
+--    fb:configure("images", true|false)
+--        Enable or disable display of images (default is enabled)
 --
 -- Lines are either strings or tables with the following structure
 --    line[idx] = string                one or more words
@@ -43,17 +46,18 @@
 --        Feedback.colors.<name>        predefined color
 --        "name"                        name of predefined color
 --        {number, number, number}      custom RGB color
+--    line.image = string               optional image path
 -- Lines can be nested recursively as so
 fb:add({
-   {"This", color="red"},
-   "line",
+   {"This", color="red"},           -- red
+   "line",                          -- white
    {
-     "has",                          -- red
-     {"multiple", color="green"},    -- green
-     "different",                    -- red
+     "has",                         -- red
+     {"multiple", color="green"},   -- green
+     "different",                   -- red
      color="red",
    },
-   {"colors", color={0.75, 0.75, 1}}
+   {"colors", color={0.75, 0.75, 1}} -- lightblue
 })
 --]]
 
@@ -87,6 +91,7 @@ Feedback = {
     -- The configuration table, private to encourage self:configure
     _config = {
         color = true,
+        images = true,
         debug = false,
     },
 
@@ -160,6 +165,13 @@ Feedback = {
             if color and self._config.color then
                 self._imgui.PushStyleColor(self._imgui.Col.Text, unpack(color))
             end
+            if line.image and self._config.images then
+                local img = self._imgui.LoadImage(line.image)
+                if img then
+                    self._imgui.Image(img, img.width, img.height)
+                    self._imgui.SameLine()
+                end
+            end
             for idx, part in ipairs(line) do
                 if idx > 1 then self._imgui.SameLine() end
                 self:draw_line(part)
@@ -167,7 +179,7 @@ Feedback = {
             if color and self._config.color then
                 self._imgui.PopStyleColor()
             end
-        else
+        elseif line ~= nil then
             self._imgui.Text(tostring(line))
         end
     end,
@@ -187,10 +199,8 @@ Feedback = {
 
     -- Apply configuration
     configure = function(self, option, value)
-        if option == "color" then
-            self._config.color = value and true or false
-        elseif option == "debug" then
-            self._config.debug = value and true or false
+        if self._config[option] ~= nil then
+            self._config[option] = value
         end
     end,
 }

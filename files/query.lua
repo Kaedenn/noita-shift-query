@@ -105,6 +105,7 @@ function sq_get_abs(iter)
 
     if not converted_any then
         GamePrint(("shift_query - shift %d failed outright"):format(iter))
+        print(("shift_query - shift %d failed outright"):format(iter))
     end
     return {from=mat_from, to=mat_to}
 

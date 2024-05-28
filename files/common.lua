@@ -184,13 +184,22 @@ end
 -- @return string
 --]]
 function localize_material_via(material, loc_mode)
+    local internal_name = material
+    local local_name = localize_material(material)
+    if q_setting_get(SETTING_TERSE) then
+        local purge_pats = {"magic_liquid_", "material_", "_liquid"}
+        for _, pat in ipairs(purge_pats) do
+            if internal_name:match(pat) then
+                internal_name = internal_name:gsub(pat, "")
+            end
+        end
+    end
     if loc_mode == FORMAT_INTERNAL then
-        return material
+        return internal_name
     end
 
-    local local_name = localize_material(material)
-    if local_name == "" or local_name == material then
-        return material
+    if local_name == "" or local_name:lower() == material then
+        return internal_name
     end
 
     if loc_mode == FORMAT_LOCALE then
@@ -198,10 +207,10 @@ function localize_material_via(material, loc_mode)
     end
 
     if loc_mode == FORMAT_BOTH then
-        return ("%s [%s]"):format(local_name, material)
+        return ("%s [%s]"):format(local_name, internal_name)
     end
 
-    return ("[%s]"):format(material)
+    return ("[%s]"):format(internal_name)
 end
 
 --[[ Possibly localize a material based on q_logging, localize setting
@@ -216,30 +225,22 @@ end
 --[[ Format a material with the possibility of including a flask
 -- @param material string
 -- @param use_flask boolean
--- @return table|string
+-- @return table
 --]]
-function flask_or(material, use_flask)
-    local logging = q_logging()
-    local mname = maybe_localize_material(material)
+function flask_or(mname, use_flask)
     if use_flask then
-        return {
-            {color="cyan_light", "flask"},
-            {color="lightgray", "or"},
-            mname
-        }
+        return {{color="cyan_light", "flask"}, {color="lightgray", "or"}, mname}
     end
-    if logging then
-        return {
-            mname,
-            {color="lightgray", "(no flask)"}
-        }
+    if q_logging() then
+        return {mname, {color="lightgray", "(no flask)"}}
     end
-    return mname
+    return {mname}
 end
 
---[[ Format a fungal shift. Returns a table of pairs of strings
+-- FIXME: Why does this return a table of pairs and not just a pair?
+--[[ Format a fungal shift. Returns a table of pairs of Feedback lines
 -- @param shift {from=table, to=table}
--- @return {{string, string}, ...}
+-- @return {{table, table}, ...}
 --]]
 function format_shift(shift)
     if not shift then return {{"invalid shift", "invalid shift"}} end
@@ -256,18 +257,40 @@ function format_shift(shift)
         end
         return {{s_source, s_target}}
     end
-    local s_target = flask_or(target.material, target.flask)
+    local m_target = {
+        image=material_get_icon(target.material),
+        maybe_localize_material(target.material)
+    }
+    local s_target = flask_or(m_target, target.flask)
     local material_pairs = {}
     local want_expand = q_setting_get(SETTING_EXPAND)
     if want_expand == EXPAND_ONE and source.name_material then
-        local s_source = flask_or(source.name_material, source.flask)
+        local mname = {
+            image=material_get_icon(source.name_material),
+            maybe_localize_material(source.name_material)
+        }
+        local s_source = flask_or(mname, source.flask)
         table.insert(material_pairs, {s_source, s_target})
     else
-        local s_source = table.concat(source.materials, ", ")
-        s_source = flask_or(s_source, source.flask)
+        local s_sources = {}
+        for _, mat in ipairs(source.materials) do
+            table.insert(s_sources, {
+                image=material_get_icon(mat),
+                maybe_localize_material(mat)
+            })
+        end
+        local s_source = flask_or(s_sources, source.flask)
         table.insert(material_pairs, {s_source, s_target})
     end
     return material_pairs
+end
+
+--[[ Get the (probable) path to the material icon
+-- @param matname string
+-- @return string
+--]]
+function material_get_icon(matname)
+    return ("data/generated/material_icons/%s.png"):format(matname)
 end
 
 --[[ Possibly format text with a given color

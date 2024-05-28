@@ -31,6 +31,7 @@ dofile_once("mods/shift_query/files/common.lua")
 dofile_once("mods/shift_query/files/query.lua")
 dofile_once("mods/shift_query/files/lib/feedback.lua")
 dofile_once("mods/shift_query/files/constants.lua")
+smallfolk = dofile_once("mods/shift_query/files/lib/smallfolk.lua")
 APLC = dofile_once("mods/shift_query/files/aplc.lua")
 
 RARE_MAT_COLOR = Feedback.colors.yellow_light
@@ -82,20 +83,35 @@ SQ = {
 
     --[[ Display either an AP or an LC recipe ]]
     print_aplc = function(self, mat, prob, combo)
+        local msg_in_presence = {color="lightgray", "in the presence of"}
+        local msg_and = {color="lightgray", "and"}
+        local str_success = "is (%d%% success rate)"
+        if q_setting_get(SETTING_TERSE) then
+            msg_in_presence[1] = "with"
+            str_success = "(%d%%)"
+        end
+
         local result = maybe_localize_material(mat)
         local mat1 = maybe_localize_material(combo[1])
         local mat2 = maybe_localize_material(combo[2])
         local mat3 = maybe_localize_material(combo[3])
         local color = self.mat_colors[mat] or {1, 1, 1}
-        self._fb:add({{result, color=color}, ("is (%d%% success rate)"):format(prob)})
+        self._fb:add({
+            {result, color=color, image=material_get_icon(mat)},
+            str_success:format(prob)
+        })
+        local msg1 = {mat1, image=material_get_icon(combo[1])}
+        local msg2 = {mat2, image=material_get_icon(combo[2])}
+        local msg3 = {mat3, image=material_get_icon(combo[3])}
         local mode = q_setting_get(SETTING_LOCALIZE)
+
         if mode == FORMAT_INTERNAL then
-            self._fb:addf("  %s, %s, %s", mat1, mat2, mat3)
+            self._fb:add({"  ", msg1, msg2, msg3})
         elseif mode == FORMAT_LOCALE then
-            self._fb:addf("  %s, in the presence of %s and %s", mat2, mat1, mat3)
+            self._fb:add({"  ", msg2, msg_in_presence, msg1, msg_and, msg3})
         else
-            self._fb:addf("  %s, in the presence of", mat2)
-            self._fb:addf("  %s and %s", mat1, mat3)
+            self._fb:add({"  ", msg2, msg_in_presence})
+            self._fb:add({"  ", msg1, msg_and, msg3})
         end
     end,
 
@@ -110,37 +126,53 @@ SQ = {
             past_shift="red_light",
         })
         for idx, pair in ipairs(format_shift(shift)) do
-            q_logf("pair[%d]={%s, %s}", idx, pair[1], pair[2])
+            local mat_from, mat_to = unpack(pair)
+            q_logf("pair[%d]={%s, %s}", idx,
+                smallfolk.dumps(mat_from), smallfolk.dumps(mat_to))
             local rare_from, rare_to = sq_is_rare_shift(shift, nil)
-            local str_from = pair[1]
-            local str_to = pair[2]
-            if rare_from then
-                str_from = {color=RARE_MAT_COLOR, pair[1]}
+            local msg_from = {mat_from}
+            local msg_to = {mat_to}
+            if rare_from then msg_from.color = RARE_MAT_COLOR end
+            if rare_to then msg_to.color = RARE_MAT_COLOR end
+
+            local terse = q_setting_get(SETTING_TERSE)
+            local line = {which_msg}
+            if not terse then
+                table.insert(line, {color="lightgray", "shift is"})
             end
-            if rare_to then
-                str_to = {color=RARE_MAT_COLOR, pair[2]}
+            table.insert(line, msg_from)
+            table.insert(line, {color="lightgray", "->"})
+            table.insert(line, msg_to)
+            self._fb:add(line)
+            if q_logging() then
+                self._fb:add(smallfolk.dumps(line))
             end
 
-            self._fb:add({
-                which_msg, 
-                {color="lightgray", "shift is"},
-                str_from,
-                {color="lightgray", "->"},
-                str_to
-            })
             local show_greed = false
             if shift.to.flask then
                 if shift.to.greedy_mat == "gold" then show_greed = true end
                 if q_setting_get(SETTING_GREED) then show_greed = true end
             end
             if show_greed then
+                local msg_holding = {color="lightgray", "when holding a pouch of gold"}
+                if terse then
+                    msg_holding = nil
+                end
                 self._fb:add({
                     which_msg,
-                    {color="lightgray", "greedy shift is"},
-                    str_from,
+                    {
+                        color="lightgray",
+                        image=material_get_icon("gold"),
+                        "greedy shift is"
+                    },
+                    msg_from,
                     {color="lightgray", "->"},
-                    {color="yellow", shift.to.greedy_mat},
-                    {color="lightgray", "when holding a pouch of gold"},
+                    {
+                        color="yellow",
+                        image=material_get_icon(shift.to.greedy_mat),
+                        shift.to.greedy_mat,
+                    },
+                    msg_holding,
                 })
             end
         end
@@ -236,7 +268,7 @@ SQ = {
 
                 local i18n_conf = q_setting_get(SETTING_LOCALIZE)
                 if i18n_conf ~= FORMAT_LOCALE then
-                    if self._imgui.MenuItem("Show Local Names") then
+                    if self._imgui.MenuItem("Show Translated Names") then
                         q_setting_set(SETTING_LOCALIZE, FORMAT_LOCALE)
                     end
                 end
@@ -246,7 +278,7 @@ SQ = {
                     end
                 end
                 if i18n_conf ~= FORMAT_BOTH then
-                    if self._imgui.MenuItem("Show Local & Internal Names") then
+                    if self._imgui.MenuItem("Show Translated & Internal Names") then
                         q_setting_set(SETTING_LOCALIZE, FORMAT_BOTH)
                     end
                 end
@@ -296,6 +328,9 @@ SQ = {
                     if self._imgui.MenuItem("Show One") then
                         q_setting_set(SETTING_PREVIOUS, tostring(1))
                     end
+                    if self._imgui.MenuItem("Show None") then
+                        q_setting_set(SETTING_PREVIOUS, tostring(0))
+                    end
                     self._imgui.EndMenu()
                 end
                 if self._imgui.BeginMenu("Pending Shifts") then
@@ -305,19 +340,30 @@ SQ = {
                     if self._imgui.MenuItem("Show Next") then
                         q_setting_set(SETTING_NEXT, tostring(1))
                     end
+                    if self._imgui.MenuItem("Show None") then
+                        q_setting_set(SETTING_NEXT, tostring(0))
+                    end
                     self._imgui.EndMenu()
                 end
 
                 self._imgui.Separator()
-                item_str = f_enable(not q_logging())
-                if self._imgui.MenuItem(item_str .. " Debugging") then
-                    q_set_logging(not q_logging())
-                end
                 item_str = f_enable(not q_setting_get(SETTING_COLOR))
                 if self._imgui.MenuItem(item_str .. " Colors") then
                     q_setting_set(SETTING_COLOR, not q_setting_get(SETTING_COLOR))
                 end
+                item_str = f_enable(not q_setting_get(SETTING_IMAGES))
+                if self._imgui.MenuItem(item_str .. " Images") then
+                    q_setting_set(SETTING_IMAGES, not q_setting_get(SETTING_IMAGES))
+                end
+                item_str = f_enable(not q_setting_get(SETTING_TERSE))
+                if self._imgui.MenuItem(item_str .. " Shorter Messages") then
+                    q_setting_set(SETTING_TERSE, not q_setting_get(SETTING_TERSE))
+                end
 
+                item_str = f_enable(not q_logging())
+                if self._imgui.MenuItem(item_str .. " Debugging") then
+                    q_set_logging(not q_logging())
+                end
                 self._imgui.EndMenu()
             end
             self._imgui.EndMenuBar()
@@ -366,6 +412,8 @@ SQ = {
         end
 
         self._fb:configure("color", q_setting_get(SETTING_COLOR))
+        self._fb:configure("images", q_setting_get(SETTING_IMAGES))
+        self._fb:configure("debug", q_logging())
         self._fb:draw_box()
     end,
 
@@ -388,7 +436,7 @@ query = nil
 
 function OnModPostInit()
     if load_imgui then
-        imgui = load_imgui({version="1.3.0", mod="FungalShiftQuery"})
+        imgui = load_imgui({version="1.4.0", mod="FungalShiftQuery"})
         query = SQ:new(imgui)
     end
 end

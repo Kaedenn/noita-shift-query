@@ -26,6 +26,8 @@ SETTING_APLC = "include_aplc"
 SETTING_REAL = "flask_real"
 SETTING_GREED = "show_greedy"
 SETTING_COLOR = "enable_color"
+SETTING_IMAGES = "enable_images"
+SETTING_TERSE = "terse"
 
 CONF_PREVIOUS = ("%s.%s"):format(MOD_ID, SETTING_PREVIOUS)
 CONF_NEXT = ("%s.%s"):format(MOD_ID, SETTING_NEXT)
@@ -36,6 +38,8 @@ CONF_APLC = ("%s.%s"):format(MOD_ID, SETTING_APLC)
 CONF_REAL = ("%s.%s"):format(MOD_ID, SETTING_REAL)
 CONF_GREED = ("%s.%s"):format(MOD_ID, SETTING_GREED)
 CONF_COLOR = ("%s.%s"):format(MOD_ID, SETTING_COLOR)
+CONF_IMAGES = ("%s.%s"):format(MOD_ID, SETTING_IMAGES)
+CONF_TERSE = ("%s.%s"):format(MOD_ID, SETTING_TERSE)
 
 --[[ Material formatting rules ]]
 FORMAT_INTERNAL = "internal"
