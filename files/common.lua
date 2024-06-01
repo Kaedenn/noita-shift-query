@@ -20,6 +20,7 @@
 dofile_once("data/scripts/lib/utilities.lua")
 dofile_once("mods/shift_query/files/constants.lua")
 smallfolk = dofile_once("mods/shift_query/files/lib/smallfolk.lua")
+MatLib = dofile_once("mods/shift_query/files/materials.lua")
 
 MOD_ID = "shift_query"
 K_CONFIG_LOG_ENABLE = MOD_ID .. "." .. "q_logging"
@@ -170,12 +171,18 @@ end
 -- @return string
 --]]
 function localize_material(material)
-    local matid = CellFactory_GetType(material)
-    local mname = material
-    if matid ~= -1 then
-        mname = CellFactory_GetUIName(matid)
+    local matinfo = MatLib:get(material)
+    if not matinfo then
+        -- Could not get material from MatLib; use fallback behavior
+        local matid = CellFactory_GetType(material)
+        local mname = material
+        if matid ~= -1 then
+            mname = CellFactory_GetUIName(matid)
+        end
+        return GameTextGetTranslatedOrNot(mname) or ""
     end
-    return GameTextGetTranslatedOrNot(mname) or ""
+
+    return matinfo.local_name
 end
 
 --[[ Localize a material based on the mode argument

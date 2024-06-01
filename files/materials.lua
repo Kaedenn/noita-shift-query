@@ -1,8 +1,51 @@
 --[[ Fungal Shift Query material rules ]]
 
 dofile("data/scripts/magic/fungal_shift.lua")
+I18N = dofile_once("mods/shift_query/files/i18n.lua")
 
-MatLib = {materials = {}}
+MatLib = {
+    materials = {
+        by_name = {},
+        by_id = {},
+    }
+}
+
+--[[ INSTANCE FUNCTIONS ]]
+
+--[[ Determine everything about materials before they begin changing ]]
+function MatLib:init()
+    I18N:init()
+    self.materials.by_name = {}
+    self.materials.by_id = {}
+
+    local mattables = {
+        CellFactory_GetAllLiquids(),
+        CellFactory_GetAllSands(),
+        CellFactory_GetAllGases(),
+        CellFactory_GetAllFires(),
+        CellFactory_GetAllSolids(),
+    }
+    for _, tbl in ipairs(mattables) do
+        for _, mat in ipairs(tbl) do
+            local matid = CellFactory_GetType(mat)
+            local entry = {
+                id = matid,
+                name = mat,
+                uiname = CellFactory_GetUIName(matid)
+            }
+            entry.local_name = I18N:get(entry.uiname, entry.uiname)
+            self.materials.by_name[name] = entry
+            self.materials.by_id[id] = entry
+        end
+    end
+end
+
+--[[ Obtain material ID, name, uiname, and localized name ]]
+function MatLib:get(name)
+    return self.materials.by_name[name]
+end
+
+--[[ STATIC FUNCTIONS ]]
 
 --[[ Obtain the materials_from (shift sources) table ]]
 function MatLib.get_materials_from()

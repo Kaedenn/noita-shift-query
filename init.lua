@@ -53,6 +53,7 @@ SQ = {
     --[[ Refresh and re-query everything ]]
     refresh = function(self)
         self._fb:clear()
+        MatLib:init()
         q_log("Calculating shifts...")
         self:query_all()
     end,
