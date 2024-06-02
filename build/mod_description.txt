@@ -13,6 +13,7 @@ Feedback and suggestions welcome! Please give this mod a thumbs up if you enjoy 
 ** Features **
 
 * Accurate flask/pouch indication: if a shift mentions a flask, then a flask or pouch will be used, assuming you're holding one with something in it.
+* Failed shift feedback and resolving (see "Failed Shifts" below).
 * Material icons! A small box is displayed next to each material with the material's texture. This can be disabled in both the mod settings and Display menu.
 * Colors! The display is made colorful to aid reading. This can be disabled in both the mod settings and Display menu.
 * Options to display a limited subset of shifts (all, previous, next, next two, etc).
@@ -24,6 +25,14 @@ Feedback and suggestions welcome! Please give this mod a thumbs up if you enjoy 
 * Option to show a material's internal name, localized name, or both. Localized names no longer change with fungal shifts.
 * Live feedback for shift grace period between consecutive shifts.
 * "Terse mode", which makes messages shorter.
+
+** Failed Shifts **
+
+Shifts can have the same material for both the source and destination. When this occurs, Noita regenerates the shift. This mod will tell you if this happens and what the regenerated shift is.
+
+For instance, on seed 1833579957, the second shift is flask or acid to acid. If not holding a flask or holding a flask of acid, the shift will instead be flammable gas to flask or toxic sludge. Holding a material other than acid will convert that material to acid. Holding a flask of acid will convert flammable gas to acid. Not holding any flask or pouch will convert flammable gas to toxic sludge.
+
+Please note that if you see the message "shift_query - shift <number> failed outright", then *please* send me a message with your seed number. Mathematically speaking this message should be practically impossible, but I don't have the patience to determine that probability.
 
 ** Greedy Shifts **
 
@@ -38,7 +47,4 @@ Material_2, in the presence of Material_1 and Material_3, has a N percent chance
 
 For example, the Alchemic Precursor recipe of "mud, water, oil" will convert large quantities of water to Alchemic Precursor in the presence of both mud and oil.
 
-** Note on Failed Shifts **
-
-If you see the message "shift_query - shift <number> failed outright", then *please* send me a message with your seed number. Mathematically speaking this message should be practically impossible, but I don't have the patience to determine that probability.
 

@@ -48,8 +48,7 @@ function sq_get_abs(iter)
     local mats_to = matinfo.get_materials_to()
     local greedy_mats = matinfo.get_greedy_materials()
 
-    local mat_from = {}
-    local mat_to = {}
+    local shift_candidates = {}
 
     local converted_any = false
     local convert_tries = 0
@@ -60,13 +59,13 @@ function sq_get_abs(iter)
         local from = pick_random_from_table_weighted( rnd, mats_from )
         local to = pick_random_from_table_weighted( rnd, mats_to )
 
-        mat_from = {
+        local mat_from = {
             flask = false,
             probability = from.probability,
             materials = from.materials,
             name_material = from.name_material or nil
         }
-        mat_to = {
+        local mat_to = {
             flask = false,
             probability = to.probability,
             material = to.material,
@@ -91,7 +90,9 @@ function sq_get_abs(iter)
             end
         end
 
-        -- Does this attempt work? (NOTE: ignores flasks)
+        table.insert(shift_candidates, {from=mat_from, to=mat_to})
+
+        -- Does this attempt work?
         for _, mat in ipairs(mat_from.materials) do
             local from_mat = CellFactory_GetType(mat)
             local to_mat = CellFactory_GetType(mat_to.material)
@@ -107,25 +108,7 @@ function sq_get_abs(iter)
         GamePrint(("shift_query - shift %d failed outright"):format(iter))
         print(("shift_query - shift %d failed outright"):format(iter))
     end
-    return {from=mat_from, to=mat_to}
-
-    --[[SetRandomSeed(89346, 42345+iter)
-    local rnd = random_create(9123, 58925+iter)
-
-    local mat_from = pick_random_from_table_weighted(rnd, mats_from)
-    local mat_to = pick_random_from_table_weighted(rnd, mats_to)
-
-    mat_from.flask = false
-    mat_to.flask = false
-    if random_nexti(rnd, 1, 100) <= 75 then -- 75% to use a flask
-        if random_nexti(rnd, 1, 100) <= 50 then -- 50% which side gets it
-            mat_from.flask = true
-        else
-            mat_to.flask = true
-        end
-    end
-
-    return {from=mat_from, to=mat_to}]]
+    return shift_candidates
 end
 
 --[[ Determine if the shift uses a "rare" material

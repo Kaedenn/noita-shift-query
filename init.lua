@@ -114,71 +114,76 @@ SQ = {
     --[[ Determine and format a single shift ]]
     query = function(self, index)
         local iter = get_curr_iter()
-        local shift = sq_get_abs(index)
+        local shift_candidates = sq_get_abs(index)
         local which_msg = format_relative(iter, index, {
             next_shift="green",
             future_shift="cyan",
             past_shift="red_light",
         })
-        local mat_from, mat_to = format_shift(shift)
-        q_logf("shift={%s, %s}", smallfolk.dumps(mat_from), smallfolk.dumps(mat_to))
-        local rare_from, rare_to = sq_is_rare_shift(shift, nil)
-        local msg_from = {mat_from}
-        local msg_to = {mat_to}
-        if rare_from then msg_from.color = RARE_MAT_COLOR end
-        if rare_to then msg_to.color = RARE_MAT_COLOR end
+        for attempt, shift in ipairs(shift_candidates) do
+            local mat_from, mat_to = format_shift(shift)
+            q_logf("shift={%s, %s}", smallfolk.dumps(mat_from), smallfolk.dumps(mat_to))
+            local rare_from, rare_to = sq_is_rare_shift(shift, nil)
+            local msg_from = {mat_from}
+            local msg_to = {mat_to}
+            if rare_from then msg_from.color = RARE_MAT_COLOR end
+            if rare_to then msg_to.color = RARE_MAT_COLOR end
 
-        local absolute = q_setting_get(SETTING_ABSOLUTE)
-        local terse = q_setting_get(SETTING_TERSE)
-        local line = {}
-        if absolute then
-            if not terse then
-                table.insert(which_msg, 1, "shift") -- To get the color of the shift
+            local absolute = q_setting_get(SETTING_ABSOLUTE)
+            local terse = q_setting_get(SETTING_TERSE)
+            local line = {}
+            if absolute then
+                if not terse then
+                    table.insert(which_msg, 1, "shift") -- To get the color of the shift
+                end
+                table.insert(line, which_msg)
+                if not terse then
+                    table.insert(line, {color="lightgray", "is"})
+                end
+            else
+                table.insert(line, which_msg)
+                if not terse then
+                    table.insert(line, {color="lightgray", "shift is"})
+                end
             end
-            table.insert(line, which_msg)
-            if not terse then
-                table.insert(line, {color="lightgray", "is"})
+            table.insert(line, msg_from)
+            table.insert(line, {color="lightgray", "->"})
+            table.insert(line, msg_to)
+            if attempt > 1 then
+                table.insert(line, {color="cyan", "if above shift fails"})
             end
-        else
-            table.insert(line, which_msg)
-            if not terse then
-                table.insert(line, {color="lightgray", "shift is"})
+            self._fb:add(line)
+            if q_logging() then
+                self._fb:add(smallfolk.dumps(line))
             end
-        end
-        table.insert(line, msg_from)
-        table.insert(line, {color="lightgray", "->"})
-        table.insert(line, msg_to)
-        self._fb:add(line)
-        if q_logging() then
-            self._fb:add(smallfolk.dumps(line))
-        end
 
-        local show_greed = false
-        if shift.to.flask then
-            if shift.to.greedy_mat == "gold" then show_greed = true end
-            if q_setting_get(SETTING_GREED) then show_greed = true end
-        end
-        if show_greed then
-            local msg_holding = {color="lightgray", "when holding a pouch of gold"}
-            if terse then
-                msg_holding = nil
+            local show_greed = false
+            if shift.to.flask then
+                if shift.to.greedy_mat == "gold" then show_greed = true end
+                if q_setting_get(SETTING_GREED) then show_greed = true end
             end
-            self._fb:add({
-                which_msg,
-                {
-                    color="lightgray",
-                    image=material_get_icon("gold"),
-                    "greedy shift is"
-                },
-                msg_from,
-                {color="lightgray", "->"},
-                {
-                    color="yellow",
-                    image=material_get_icon(shift.to.greedy_mat),
-                    shift.to.greedy_mat,
-                },
-                msg_holding,
-            })
+            if show_greed then
+                local msg_holding = {color="lightgray", "when holding a pouch of gold"}
+                if terse then
+                    msg_holding = nil
+                end
+                self._fb:add({
+                    which_msg,
+                    {
+                        color="lightgray",
+                        image=material_get_icon("gold"),
+                        "greedy shift is"
+                    },
+                    msg_from,
+                    {color="lightgray", "->"},
+                    {
+                        color="yellow",
+                        image=material_get_icon(shift.to.greedy_mat),
+                        shift.to.greedy_mat,
+                    },
+                    msg_holding,
+                })
+            end
         end
     end,
 
