@@ -4,12 +4,6 @@
 -- the Shift Query mod. Note that some of the values below would need
 -- to be changed for other mods.
 --
--- FIXME: KNOWN ISSUES:
---
--- When debugging is enabled and a shift uses a flask for either the
--- source or destination material, the other material should not have
--- the "(no flask)" designation, as it's redundant.
---
 -- TODO:
 --
 -- Move the setting stuff into a class and allow stuff like
@@ -28,14 +22,12 @@ K_CONFIG_FORCE_UPDATE = MOD_ID .. "." .. "q_force_update"
 
 --[[ Return either "Enable" or "Disable" based on the condition ]]
 function f_enable(cond)
-    if cond then return "Enable" end
-    return "Disable"
+    return cond and "Enable" or "Disable"
 end
 
 --[[ As above, but for "Show" or "Hide" ]]
 function f_show(cond)
-    if cond then return "Show" end
-    return "Hide"
+    return cond and "Show" or "Hide"
 end
 
 --[[ Trigger a force update ]]
@@ -188,32 +180,25 @@ end
 --]]
 function localize_material_via(material, loc_mode)
     local internal_name = material
-    local local_name = localize_material(material)
+    local local_name = localize_material(material):lower()
+    if local_name == "" then
+        local_name = internal_name
+    end
     if q_setting_get(SETTING_TERSE) then
-        local purge_pats = {"magic_liquid_", "material_", "_liquid"}
+        local purge_pats = {"magic_liquid_", "material_"}
         for _, pat in ipairs(purge_pats) do
             if internal_name:match(pat) then
                 internal_name = internal_name:gsub(pat, "")
             end
         end
     end
-    if loc_mode == FORMAT_INTERNAL then
-        return internal_name
+    local result = local_name
+    if loc_mode == FORMAT_INTERNAL or local_name == internal_name then
+        result = internal_name
+    elseif loc_mode == FORMAT_BOTH then
+        result = ("%s [%s]"):format(local_name, internal_name)
     end
-
-    if local_name == "" or local_name:lower() == material then
-        return internal_name
-    end
-
-    if loc_mode == FORMAT_LOCALE then
-        return local_name
-    end
-
-    if loc_mode == FORMAT_BOTH then
-        return ("%s [%s]"):format(local_name, internal_name)
-    end
-
-    return ("[%s]"):format(internal_name)
+    return result
 end
 
 --[[ Possibly localize a material based on q_logging, localize setting
@@ -233,9 +218,6 @@ end
 function flask_or(mname, use_flask)
     if use_flask then
         return {{color="cyan_light", "flask"}, {color="lightgray", "or"}, mname}
-    end
-    if q_logging() then
-        return {mname, {color="lightgray", "(no flask)"}}
     end
     return {mname}
 end

@@ -53,28 +53,21 @@ SQ = {
         self:query_all()
     end,
 
-    --[[ Deduce {first_shift_index, last_shift_index} range ]]
+    --[[ Deduce the shift range (start, end-1)
+    -- @return start_index, end_index
+    --]]
     get_range = function(self)
         local curr_iter = get_curr_iter()
         local range_prev = math.floor(q_setting_get(SETTING_PREVIOUS))
         local range_next = math.floor(q_setting_get(SETTING_NEXT))
-        q_logf("pcount=%s, ncount=%s, curr=%s", range_prev, range_next, curr_iter)
-        local idx_start = curr_iter
-        local idx_end = curr_iter
-        if range_prev < 0 then
-            idx_start = 0
-        elseif range_prev > 0 then
+        local idx_start, idx_end = 0, MAX_SHIFTS
+        if range_prev >= 0 then
             idx_start = math.max(curr_iter - range_prev, 0)
         end
-
-        if range_next < 0 then
-            idx_end = MAX_SHIFTS
-        else
-            idx_end = math.min(curr_iter + range_next - 1, MAX_SHIFTS)
+        if range_next >= 0 then
+            idx_end = math.min(curr_iter + range_next, MAX_SHIFTS)
         end
-
-        q_logf("start=%s, end=%s", idx_start, idx_end)
-        return {first=idx_start, last=idx_end}
+        return idx_start, idx_end
     end,
 
     --[[ Display either an AP or an LC recipe ]]
@@ -113,6 +106,8 @@ SQ = {
 
     --[[ Determine and format a single shift ]]
     query = function(self, index)
+        local absolute = q_setting_get(SETTING_ABSOLUTE)
+        local terse = q_setting_get(SETTING_TERSE)
         local iter = get_curr_iter()
         local shift_candidates = sq_get_abs(index)
         local which_msg = format_relative(iter, index, {
@@ -120,17 +115,15 @@ SQ = {
             future_shift="cyan",
             past_shift="red_light",
         })
+        local arrow_str = {color="lightgray", "->"}
         for attempt, shift in ipairs(shift_candidates) do
+            q_logf("shift[%d][%d]=%s", iter, attempt, smallfolk.dumps(shift))
             local mat_from, mat_to = format_shift(shift)
-            q_logf("shift={%s, %s}", smallfolk.dumps(mat_from), smallfolk.dumps(mat_to))
             local rare_from, rare_to = sq_is_rare_shift(shift, nil)
-            local msg_from = {mat_from}
-            local msg_to = {mat_to}
+            local msg_from, msg_to = {mat_from}, {mat_to}
             if rare_from then msg_from.color = RARE_MAT_COLOR end
             if rare_to then msg_to.color = RARE_MAT_COLOR end
 
-            local absolute = q_setting_get(SETTING_ABSOLUTE)
-            local terse = q_setting_get(SETTING_TERSE)
             local line = {}
             if absolute then
                 if not terse then
@@ -147,15 +140,13 @@ SQ = {
                 end
             end
             table.insert(line, msg_from)
-            table.insert(line, {color="lightgray", "->"})
+            table.insert(line, arrow_str)
             table.insert(line, msg_to)
             if attempt > 1 then
                 table.insert(line, {color="cyan", "if above shift fails"})
             end
             self._fb:add(line)
-            if q_logging() then
-                self._fb:add(smallfolk.dumps(line))
-            end
+            if q_logging() then self._fb:add(smallfolk.dumps(line)) end
 
             local show_greed = false
             if shift.to.flask then
@@ -163,26 +154,25 @@ SQ = {
                 if q_setting_get(SETTING_GREED) then show_greed = true end
             end
             if show_greed then
-                local msg_holding = {color="lightgray", "when holding a pouch of gold"}
-                if terse then
-                    msg_holding = nil
-                end
-                self._fb:add({
-                    which_msg,
-                    {
+                local gold_msg = {
+                    color="lightgray",
+                    image=material_get_icon("gold"),
+                    "greedy shift is"
+                }
+                local target_msg = {
+                    color="yellow",
+                    image=material_get_icon(shift.to.greedy_mat),
+                    maybe_localize_material(shift.to.greedy_mat),
+                }
+                line = {which_msg, gold_msg, msg_from, arrow_str, target_msg}
+                if not terse then
+                    table.insert(line, {
                         color="lightgray",
-                        image=material_get_icon("gold"),
-                        "greedy shift is"
-                    },
-                    msg_from,
-                    {color="lightgray", "->"},
-                    {
-                        color="yellow",
-                        image=material_get_icon(shift.to.greedy_mat),
-                        shift.to.greedy_mat,
-                    },
-                    msg_holding,
-                })
+                        "when holding a pouch of gold"
+                    })
+                end
+                self._fb:add(line)
+                if q_logging() then self._fb:add(smallfolk.dumps(line)) end
             end
         end
     end,
@@ -192,13 +182,11 @@ SQ = {
         if q_setting_get(SETTING_APLC) then
             self:query_aplc()
         end
-        local bounds = self:get_range()
-        q_logf("Querying shifts %s to %s", bounds.first, bounds.last)
-        local iter = bounds.first
-        while iter <= bounds.last do
+        local idx_start, idx_end = self:get_range()
+        q_logf("Querying shifts between %d and %d", idx_start, idx_end)
+        for iter = idx_start, idx_end - 1 do
             q_logf("Querying shift %s", iter)
             self:query(iter)
-            iter = iter + 1
         end
     end,
 
@@ -260,9 +248,9 @@ SQ = {
         for _, matpair in ipairs(self:get_shift_map()) do
             local mat_from, mat_to = unpack(matpair)
             local from_loc = MatLib:get(mat_from) or {}
+            local from_loc_l = (from_loc.local_name or mat_from):lower()
             local to_loc = MatLib:get(mat_to) or {}
-            local from_loc_l = from_loc.local_name:lower()
-            local to_loc_l = to_loc.local_name:lower()
+            local to_loc_l = (to_loc.local_name or mat_to):lower()
             local from_str, to_str = mat_from, mat_to
             if mode == FORMAT_LOCALE then
                 from_str = from_loc_l
@@ -291,10 +279,8 @@ SQ = {
     format_cooldown = function(self)
         local last_shift_frame = get_last_shift_frame()
         local cooldown = get_cooldown_sec()
-        if last_shift_frame > -1 then
-            if cooldown > 0 then
-                return format_duration(cooldown)
-            end
+        if last_shift_frame > -1 and cooldown > 0 then
+            return format_duration(cooldown)
         end
         return nil
     end,
@@ -324,6 +310,13 @@ SQ = {
                 if imgui.MenuItem("Close") then
                     GamePrint("UI closed; re-open using the Mod Settings window")
                     q_disable_gui()
+                end
+                imgui.Separator()
+
+                if imgui.MenuItem("Copy World Seed") then
+                    local seed = tonumber(StatsGetValue("world_seed"))
+                    imgui.SetClipboardText(seed)
+                    GamePrint(("World Seed %s copied to the clipboard"):format(seed))
                 end
                 imgui.EndMenu()
             end
@@ -464,8 +457,6 @@ SQ = {
 
 imgui = nil
 query = nil
-
--- function OnWorldInitialized() end
 
 --[[ Load the material table.
 --
