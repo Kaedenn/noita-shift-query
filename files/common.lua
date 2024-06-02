@@ -154,11 +154,7 @@ end
 
 -- Get the "enable gui?" setting's value
 function q_get_enabled()
-    local value = q_setting_get(SETTING_ENABLE)
-    if value then
-        return true
-    end
-    return false
+    return q_setting_get(SETTING_ENABLE) and true or false
 end
 
 -- Disable the GUI
@@ -182,7 +178,7 @@ function localize_material(material)
         return GameTextGetTranslatedOrNot(mname) or ""
     end
 
-    return matinfo.local_name
+    return matinfo.local_name or ""
 end
 
 --[[ Localize a material based on the mode argument
@@ -244,13 +240,12 @@ function flask_or(mname, use_flask)
     return {mname}
 end
 
--- FIXME: Why does this return a table of pairs and not just a pair?
---[[ Format a fungal shift. Returns a table of pairs of Feedback lines
+--[[ Format a fungal shift. Returns a pair of Feedback lines
 -- @param shift {from=table, to=table}
--- @return {{table, table}, ...}
+-- @return table, table
 --]]
 function format_shift(shift)
-    if not shift then return {{"invalid shift", "invalid shift"}} end
+    if not shift then return {"invalid shift", "invalid shift"} end
     local source = shift.from
     local target = shift.to
     if not source or not target then
@@ -262,22 +257,21 @@ function format_shift(shift)
         if not target then
             s_target = "no data"
         end
-        return {{s_source, s_target}}
+        return {s_source, s_target}
     end
     local m_target = {
         image=material_get_icon(target.material),
         maybe_localize_material(target.material)
     }
+    local s_source = {shift.from}
     local s_target = flask_or(m_target, target.flask)
-    local material_pairs = {}
     local want_expand = q_setting_get(SETTING_EXPAND)
     if want_expand == EXPAND_ONE and source.name_material then
         local mname = {
             image=material_get_icon(source.name_material),
             maybe_localize_material(source.name_material)
         }
-        local s_source = flask_or(mname, source.flask)
-        table.insert(material_pairs, {s_source, s_target})
+        s_source = flask_or(mname, source.flask)
     else
         local s_sources = {}
         for _, mat in ipairs(source.materials) do
@@ -286,10 +280,9 @@ function format_shift(shift)
                 maybe_localize_material(mat)
             })
         end
-        local s_source = flask_or(s_sources, source.flask)
-        table.insert(material_pairs, {s_source, s_target})
+        s_source = flask_or(s_sources, source.flask)
     end
-    return material_pairs
+    return s_source, s_target
 end
 
 --[[ Get the (probable) path to the material icon
@@ -320,20 +313,28 @@ end
 --]]
 function format_relative(curr, index, colors)
     local color = colors or {}
-    local term = format_color("invalid", "red")
+    local term, term_color
     if index == curr then
-        term = format_color("next", color.next_shift)
+        term = "next"
+        term_color = color.next_shift
     elseif index > curr then
-        term = format_color(("next+%s"):format(index-curr), color.future_shift)
+        term = ("next+%s"):format(index-curr)
+        term_color = color.future_shift
     elseif index == curr - 1 then
-        term = format_color("prev", color.last_shift or color.past_shift)
-    elseif index < curr - 1 then
-        term = format_color(("prev-%s"):format(curr-index-1), color.past_shift)
+        term = "prev"
+        term_color = color.past_shift
+    else
+        term = ("prev-%s"):format(curr-index-1)
+        term_color = color.past_shift
     end
+    if q_setting_get(SETTING_ABSOLUTE) then
+        term = ("%d"):format(index+1)
+    end
+    local result = format_color(term, term_color)
     if q_logging() then
-        term[#term] = term[#term] .. ("[i=%s]"):format(index) 
+        result[#result] = result[#result] .. ("[i=%s]"):format(index) 
     end
-    return term
+    return result
 end
 
 --[[ Format a duration of time

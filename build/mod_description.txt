@@ -1,6 +1,6 @@
 What are the fungal shifts for this seed? Which shifts will use a flask? What's the Alchemic Precursor recipe? What's the Lively Concoction recipe?
 
-This mod will tell you exactly these. It lists all pending shifts (configurable) using either the internal material name or your localized name (also configurable).
+This mod will tell you exactly these. It lists all pending shifts (configurable) using either the internal material name or the localized name (also configurable).
 
 If a shift mentions using a flask, then a flask or pouch will be used, assuming you're holding one. If a flask isn't mentioned, then the shift won't use one.
 
@@ -8,16 +8,22 @@ This mod requires Noita-Dear-ImGui, which requires unsafe mods to be enabled. Do
 
 This mod benefits tremendously from GrahamBurger's wonderful Less Inaccuracies mod. Download that here: https://steamcommunity.com/sharedfiles/filedetails/?id=2963870452
 
+Feedback and suggestions welcome! Please give this mod a thumbs up if you enjoy it; this helps the mod reach more people!
+
 ** Features **
 
 * Accurate flask/pouch indication: if a shift mentions a flask, then a flask or pouch will be used, assuming you're holding one with something in it.
-* Option to display a limited subset of shifts (all, previous, current, next, next two, etc).
+* Material icons! A small box is displayed next to each material with the material's texture. This can be disabled in both the mod settings and Display menu.
+* Colors! The display is made colorful to aid reading. This can be disabled in both the mod settings and Display menu.
+* Options to display a limited subset of shifts (all, previous, next, next two, etc).
+* Accurate material names and icons: shifting a material will not change the list of shifts. This makes using localized/translated material names viable.
 * Option to display greedy shifts (successful greedy shifts are always displayed) (see "Greedy Shifts" below).
 * Option to display either all or the primary shift material for multi-material shifts.
 * Option to enable or disable Alchemic Precursor and Lively Concoction recipes (see "Alchemic Precursor and Lively Concoction" below).
-* Option to show you exactly what materials have been shifted.
-* Option to show a material's internal name, localized name, or both. Note that localized names change with fungal shifts (this is how fungal shifts work) so be careful if you pick that option.
+* Option to show you exactly what materials have been shifted. This is referred to as the Shift Log in the Display menu.
+* Option to show a material's internal name, localized name, or both. Localized names no longer change with fungal shifts.
 * Live feedback for shift grace period between consecutive shifts.
+* "Terse mode", which makes messages shorter.
 
 ** Greedy Shifts **
 
@@ -36,4 +42,3 @@ For example, the Alchemic Precursor recipe of "mud, water, oil" will convert lar
 
 If you see the message "shift_query - shift <number> failed outright", then *please* send me a message with your seed number. Mathematically speaking this message should be practically impossible, but I don't have the patience to determine that probability.
 
-Feedback welcome!

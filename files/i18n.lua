@@ -4,7 +4,7 @@ I18N = {
     entries = {},
     by_key = {},
     lang_id = 1,
-    lang_name = "en",
+    locale = "en",
 }
 
 local function split_csv(line)
@@ -49,7 +49,7 @@ function I18N:init()
     for colidx, entry in ipairs(by_key["current_language"]) do
         if entry == lang_name then
             self.lang_id = colidx
-            self.lang_name = by_key[""][colidx]
+            self.locale = by_key[""][colidx]
             break
         end
     end
@@ -57,12 +57,13 @@ function I18N:init()
     self.entries = lines
     self.by_key = by_key
 
-    local curr_lang = self:get("current_language")
-    assert(curr_lang == self.lang_name, ("current_language %q not %q"):format(curr_lang, self.lang_name))
+    local lang_have = self:get("current_language")
+    local lang_want = GameTextGet("$current_language")
+    assert(lang_have == lang_want, ("current_language %q not %q"):format(lang_have, lang_want))
 end
 
 function I18N:get(key, default)
-    local row = self.by_key[key]
+    local row = self.by_key[key:gsub("^%$", "")]
     if not row or #row < self.lang_id then
         return default
     end

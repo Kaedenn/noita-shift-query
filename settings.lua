@@ -156,29 +156,43 @@ materials to Holy Grass, if held.]],
         },
     },
     {
-        id = "enable_color",
-        ui_name = "Enable Color Text",
-        ui_description = "Should text be drawn using colors?",
-        value_default = true,
-        change_fn = sq_setting_changed,
-        scope = MOD_SETTING_SCOPE_RUNTIME,
-    },
-    {
-        id = "enable_images",
-        ui_name = "Enable Material Images",
-        ui_description = "Show material texture icons next to each material",
-        value_default = true,
-        change_fn = sq_setting_changed,
-        scope = MOD_SETTING_SCOPE_RUNTIME,
-    },
-    {
-        id = "terse",
-        ui_name = "Terse Mode",
-        ui_description = "Remove unnecessary text to make messages shorter",
-        value_default = false,
-        change_fn = sq_setting_changed,
-        scope = MOD_SETTING_SCOPE_RUNTIME,
-    },
+        category_id = "display",
+        ui_name = "Display Configuration",
+        settings = {
+            {
+                id = "enable_color",
+                ui_name = "Enable Color Text",
+                ui_description = "Should text be drawn using colors?",
+                value_default = true,
+                change_fn = sq_setting_changed,
+                scope = MOD_SETTING_SCOPE_RUNTIME,
+            },
+            {
+                id = "enable_images",
+                ui_name = "Enable Material Images",
+                ui_description = "Show material texture icons next to each material",
+                value_default = true,
+                change_fn = sq_setting_changed,
+                scope = MOD_SETTING_SCOPE_RUNTIME,
+            },
+            {
+                id = "absolute_shifts",
+                ui_name = "Use Absolute Numbering",
+                ui_description = "Use absolute shift numbers instead of relative numbers",
+                value_default = false,
+                change_fn = sq_setting_changed,
+                scope = MOD_SETTING_SCOPE_RUNTIME,
+            },
+            {
+                id = "terse",
+                ui_name = "Terse Mode",
+                ui_description = "Remove unnecessary text to make messages shorter",
+                value_default = false,
+                change_fn = sq_setting_changed,
+                scope = MOD_SETTING_SCOPE_RUNTIME,
+            },
+        }
+    }
 }
 
 function ModSettingsUpdate(init_scope)

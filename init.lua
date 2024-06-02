@@ -14,18 +14,13 @@
 --
 -- This mod instead clones part of data/scripts/magic/fungal_shift.lua
 -- and runs the algorithm manually. Note that this will break if the
--- material probability tables change or if the shift logic itself
--- changes.
+-- shift logic changes.
 --
 -- PLANNED FEATURES
---
--- Add either flask or pouch icon next to each material with the
--- material's CellData color (parse "data/materials.xml").
 --
 -- Allow usage without Noita-Dear-ImGui using an alternate GUI library.
 -- Can use gusgui from https://github.com/ofoxsmith/gusgui
 --
--- Add "fungal_shift_ui_icon" to the ImGui window.
 
 dofile_once("mods/shift_query/files/common.lua")
 dofile_once("mods/shift_query/files/query.lua")
@@ -42,6 +37,7 @@ SQ = {
         magic_liquid_hp_regeneration_unstable = {0.63, 0.95, 0.5},
     },
 
+    --[[ Initialize SQ ]]
     new = function(self, imgui)
         self._imgui = imgui
         self._fb = Feedback:init(imgui)
@@ -53,7 +49,6 @@ SQ = {
     --[[ Refresh and re-query everything ]]
     refresh = function(self)
         self._fb:clear()
-        MatLib:init()
         q_log("Calculating shifts...")
         self:query_all()
     end,
@@ -74,8 +69,8 @@ SQ = {
 
         if range_next < 0 then
             idx_end = MAX_SHIFTS
-        elseif range_next > 0 then
-            idx_end = math.min(curr_iter + range_next, MAX_SHIFTS)
+        else
+            idx_end = math.min(curr_iter + range_next - 1, MAX_SHIFTS)
         end
 
         q_logf("start=%s, end=%s", idx_start, idx_end)
@@ -118,7 +113,6 @@ SQ = {
 
     --[[ Determine and format a single shift ]]
     query = function(self, index)
-        q_logf("query(%d)", index)
         local iter = get_curr_iter()
         local shift = sq_get_abs(index)
         local which_msg = format_relative(iter, index, {
@@ -126,56 +120,65 @@ SQ = {
             future_shift="cyan",
             past_shift="red_light",
         })
-        for idx, pair in ipairs(format_shift(shift)) do
-            local mat_from, mat_to = unpack(pair)
-            q_logf("pair[%d]={%s, %s}", idx,
-                smallfolk.dumps(mat_from), smallfolk.dumps(mat_to))
-            local rare_from, rare_to = sq_is_rare_shift(shift, nil)
-            local msg_from = {mat_from}
-            local msg_to = {mat_to}
-            if rare_from then msg_from.color = RARE_MAT_COLOR end
-            if rare_to then msg_to.color = RARE_MAT_COLOR end
+        local mat_from, mat_to = format_shift(shift)
+        q_logf("shift={%s, %s}", smallfolk.dumps(mat_from), smallfolk.dumps(mat_to))
+        local rare_from, rare_to = sq_is_rare_shift(shift, nil)
+        local msg_from = {mat_from}
+        local msg_to = {mat_to}
+        if rare_from then msg_from.color = RARE_MAT_COLOR end
+        if rare_to then msg_to.color = RARE_MAT_COLOR end
 
-            local terse = q_setting_get(SETTING_TERSE)
-            local line = {which_msg}
+        local absolute = q_setting_get(SETTING_ABSOLUTE)
+        local terse = q_setting_get(SETTING_TERSE)
+        local line = {}
+        if absolute then
+            if not terse then
+                table.insert(which_msg, 1, "shift") -- To get the color of the shift
+            end
+            table.insert(line, which_msg)
+            if not terse then
+                table.insert(line, {color="lightgray", "is"})
+            end
+        else
+            table.insert(line, which_msg)
             if not terse then
                 table.insert(line, {color="lightgray", "shift is"})
             end
-            table.insert(line, msg_from)
-            table.insert(line, {color="lightgray", "->"})
-            table.insert(line, msg_to)
-            self._fb:add(line)
-            if q_logging() then
-                self._fb:add(smallfolk.dumps(line))
-            end
+        end
+        table.insert(line, msg_from)
+        table.insert(line, {color="lightgray", "->"})
+        table.insert(line, msg_to)
+        self._fb:add(line)
+        if q_logging() then
+            self._fb:add(smallfolk.dumps(line))
+        end
 
-            local show_greed = false
-            if shift.to.flask then
-                if shift.to.greedy_mat == "gold" then show_greed = true end
-                if q_setting_get(SETTING_GREED) then show_greed = true end
+        local show_greed = false
+        if shift.to.flask then
+            if shift.to.greedy_mat == "gold" then show_greed = true end
+            if q_setting_get(SETTING_GREED) then show_greed = true end
+        end
+        if show_greed then
+            local msg_holding = {color="lightgray", "when holding a pouch of gold"}
+            if terse then
+                msg_holding = nil
             end
-            if show_greed then
-                local msg_holding = {color="lightgray", "when holding a pouch of gold"}
-                if terse then
-                    msg_holding = nil
-                end
-                self._fb:add({
-                    which_msg,
-                    {
-                        color="lightgray",
-                        image=material_get_icon("gold"),
-                        "greedy shift is"
-                    },
-                    msg_from,
-                    {color="lightgray", "->"},
-                    {
-                        color="yellow",
-                        image=material_get_icon(shift.to.greedy_mat),
-                        shift.to.greedy_mat,
-                    },
-                    msg_holding,
-                })
-            end
+            self._fb:add({
+                which_msg,
+                {
+                    color="lightgray",
+                    image=material_get_icon("gold"),
+                    "greedy shift is"
+                },
+                msg_from,
+                {color="lightgray", "->"},
+                {
+                    color="yellow",
+                    image=material_get_icon(shift.to.greedy_mat),
+                    shift.to.greedy_mat,
+                },
+                msg_holding,
+            })
         end
     end,
 
@@ -246,6 +249,39 @@ SQ = {
         return shift_pairs
     end,
 
+    --[[ Print the shift map to the Feedback object ]]
+    print_shift_map = function(self)
+        local mode = q_setting_get(SETTING_LOCALIZE)
+        for _, matpair in ipairs(self:get_shift_map()) do
+            local mat_from, mat_to = unpack(matpair)
+            local from_loc = MatLib:get(mat_from) or {}
+            local to_loc = MatLib:get(mat_to) or {}
+            local from_loc_l = from_loc.local_name:lower()
+            local to_loc_l = to_loc.local_name:lower()
+            local from_str, to_str = mat_from, mat_to
+            if mode == FORMAT_LOCALE then
+                from_str = from_loc_l
+                to_str = to_loc_l
+            elseif mode == FORMAT_BOTH then
+                from_str = ("%s [%s]"):format(from_loc_l, mat_from)
+                to_str = ("%s [%s]"):format(to_loc_l, mat_to)
+            end
+            self._fb:draw_line({
+                {
+                    color="green",
+                    image=material_get_icon(mat_from),
+                    from_str,
+                },
+                "became",
+                {
+                    color="green",
+                    image=material_get_icon(mat_to),
+                    to_str,
+                }
+            })
+        end
+    end,
+
     --[[ Format the cooldown timer ]]
     format_cooldown = function(self)
         local last_shift_frame = get_last_shift_frame()
@@ -260,114 +296,101 @@ SQ = {
 
     --[[ Draw the menu bar using Noita-Dear-Imgui ]]
     draw_menu_imgui = function(self)
-        if self._imgui.BeginMenuBar() then
-            if self._imgui.BeginMenu("Actions") then
-                if self._imgui.MenuItem("Refresh") then
+        local imgui = self._imgui
+        local function menu_toggle(name, setting, f_func)
+            if not f_func then f_func = f_show end
+            local curr = q_setting_get(setting)
+            local disp_str = f_func(not curr) .. " " .. name
+            if imgui.MenuItem(disp_str) then
+                q_setting_set(setting, not curr)
+            end
+        end
+        if imgui.BeginMenuBar() then
+            if imgui.BeginMenu("Actions") then
+                if imgui.MenuItem("Force Refresh") then
                     self:refresh()
                 end
-                self._imgui.Separator()
 
+                local debugging_str = f_enable(not q_logging())
+                if imgui.MenuItem(debugging_str .. " Debugging") then
+                    q_set_logging(not q_logging())
+                end
+
+                if imgui.MenuItem("Close") then
+                    GamePrint("UI closed; re-open using the Mod Settings window")
+                    q_disable_gui()
+                end
+                imgui.EndMenu()
+            end
+
+            if imgui.BeginMenu("Shifts") then
+                local entries = {
+                    {"Prior Shifts", SETTING_PREVIOUS},
+                    {"Pending Shifts", SETTING_NEXT},
+                }
+                local choices = {
+                    {"Show All", tostring(ALL_SHIFTS)},
+                    {"Show One", tostring(1)},
+                    {"Show None", tostring(0)},
+                }
+                for _, entry in ipairs(entries) do
+                    local ename, evar = unpack(entry)
+                    if imgui.BeginMenu(ename) then
+                        for _, choice in ipairs(choices) do
+                            local cname, cval = unpack(choice)
+                            if imgui.MenuItem(cname) then
+                                q_setting_set(evar, cval)
+                            end
+                        end
+                        imgui.EndMenu()
+                    end
+                end
+                imgui.EndMenu()
+            end
+
+            if imgui.BeginMenu("Display") then
                 local i18n_conf = q_setting_get(SETTING_LOCALIZE)
                 if i18n_conf ~= FORMAT_LOCALE then
-                    if self._imgui.MenuItem("Show Translated Names") then
+                    if imgui.MenuItem("Show Translated Names") then
                         q_setting_set(SETTING_LOCALIZE, FORMAT_LOCALE)
                     end
                 end
                 if i18n_conf ~= FORMAT_INTERNAL then
-                    if self._imgui.MenuItem("Show Internal Names") then
+                    if imgui.MenuItem("Show Internal Names") then
                         q_setting_set(SETTING_LOCALIZE, FORMAT_INTERNAL)
                     end
                 end
                 if i18n_conf ~= FORMAT_BOTH then
-                    if self._imgui.MenuItem("Show Translated & Internal Names") then
+                    if imgui.MenuItem("Show Translated & Internal Names") then
                         q_setting_set(SETTING_LOCALIZE, FORMAT_BOTH)
                     end
                 end
+                imgui.Separator()
 
-                self._imgui.Separator()
                 local expand_opt = q_setting_get(SETTING_EXPAND)
                 if expand_opt == EXPAND_ONE then
-                    if self._imgui.MenuItem("Show All Source Materials") then
+                    if imgui.MenuItem("Show All Source Materials") then
                         q_setting_set(SETTING_EXPAND, EXPAND_ALL)
                     end
                 else
-                    if self._imgui.MenuItem("Show Primary Source Material") then
+                    if imgui.MenuItem("Show Primary Source Material") then
                         q_setting_set(SETTING_EXPAND, EXPAND_ONE)
                     end
                 end
+                imgui.Separator()
 
-                self._imgui.Separator()
-                local real_str = f_show(not q_setting_get(SETTING_REAL))
-                if self._imgui.MenuItem(real_str .. " Shift Log") then
-                    q_setting_set(SETTING_REAL, not q_setting_get(SETTING_REAL))
-                end
+                menu_toggle("Shift Log", SETTING_REAL, f_show)
+                menu_toggle("AP/LC Recipes", SETTING_APLC, f_show)
+                menu_toggle("Greedy Shifts", SETTING_GREED, f_show)
+                imgui.Separator()
 
-                local aplc_str = f_show(not q_setting_get(SETTING_APLC))
-                if self._imgui.MenuItem(aplc_str .. " AP/LC Recipes") then
-                    q_setting_set(SETTING_APLC, not q_setting_get(SETTING_APLC))
-                end
-
-                local greed_str = f_show(not q_setting_get(SETTING_GREED))
-                if self._imgui.MenuItem(greed_str .. " Greedy Shifts") then
-                    q_setting_set(SETTING_GREED, not q_setting_get(SETTING_GREED))
-                end
-
-                self._imgui.Separator()
-                if self._imgui.MenuItem("Close") then
-                    GamePrint("UI closed; re-open using the Mod Settings window")
-                    q_disable_gui()
-                end
-                self._imgui.EndMenu()
+                menu_toggle("Colors", SETTING_COLOR, f_enable)
+                menu_toggle("Images", SETTING_IMAGES, f_enable)
+                menu_toggle("Absolute Numbers", SETTING_ABSOLUTE, f_enable)
+                menu_toggle("Shorter Messages", SETTING_TERSE, f_enable)
+                imgui.EndMenu()
             end
-
-            if self._imgui.BeginMenu("Display") then
-                local item_str
-                if self._imgui.BeginMenu("Prior Shifts") then
-                    if self._imgui.MenuItem("Show All") then
-                        q_setting_set(SETTING_PREVIOUS, tostring(ALL_SHIFTS))
-                    end
-                    if self._imgui.MenuItem("Show One") then
-                        q_setting_set(SETTING_PREVIOUS, tostring(1))
-                    end
-                    if self._imgui.MenuItem("Show None") then
-                        q_setting_set(SETTING_PREVIOUS, tostring(0))
-                    end
-                    self._imgui.EndMenu()
-                end
-                if self._imgui.BeginMenu("Pending Shifts") then
-                    if self._imgui.MenuItem("Show All") then
-                        q_setting_set(SETTING_NEXT, tostring(ALL_SHIFTS))
-                    end
-                    if self._imgui.MenuItem("Show Next") then
-                        q_setting_set(SETTING_NEXT, tostring(1))
-                    end
-                    if self._imgui.MenuItem("Show None") then
-                        q_setting_set(SETTING_NEXT, tostring(0))
-                    end
-                    self._imgui.EndMenu()
-                end
-
-                self._imgui.Separator()
-                item_str = f_enable(not q_setting_get(SETTING_COLOR))
-                if self._imgui.MenuItem(item_str .. " Colors") then
-                    q_setting_set(SETTING_COLOR, not q_setting_get(SETTING_COLOR))
-                end
-                item_str = f_enable(not q_setting_get(SETTING_IMAGES))
-                if self._imgui.MenuItem(item_str .. " Images") then
-                    q_setting_set(SETTING_IMAGES, not q_setting_get(SETTING_IMAGES))
-                end
-                item_str = f_enable(not q_setting_get(SETTING_TERSE))
-                if self._imgui.MenuItem(item_str .. " Shorter Messages") then
-                    q_setting_set(SETTING_TERSE, not q_setting_get(SETTING_TERSE))
-                end
-
-                item_str = f_enable(not q_logging())
-                if self._imgui.MenuItem(item_str .. " Debugging") then
-                    q_set_logging(not q_logging())
-                end
-                self._imgui.EndMenu()
-            end
-            self._imgui.EndMenuBar()
+            imgui.EndMenuBar()
         end
     end,
 
@@ -379,12 +402,14 @@ SQ = {
             self:refresh()
         end
 
-        -- Draw the current shift iteration
-        self._imgui.Text(("Shift: %s"):format(iter))
-        self._imgui.SameLine()
+        self._fb:configure("color", q_setting_get(SETTING_COLOR))
+        self._fb:configure("images", q_setting_get(SETTING_IMAGES))
+        self._fb:configure("debug", q_logging())
 
-        -- Draw the current shift cooldown (if there's been a shift)
+        -- Draw the current shift iteration and cooldown (if there's been a shift)
         if iter > 0 then
+            self._imgui.Text(("Shift: %s"):format(iter))
+            self._imgui.SameLine()
             local cooldown = self:format_cooldown()
             if cooldown ~= nil then
                 self._imgui.Text(("Cooldown: %s"):format(cooldown))
@@ -398,23 +423,25 @@ SQ = {
         local next_c = math.floor(q_setting_get(SETTING_NEXT))
         local next_text = f_shift_count(next_c, "pending")
         local prev_text = f_shift_count(prev_c, "previous")
-        self._imgui.Text(("Displaying %s and %s"):format(prev_text, next_text))
+        self._fb:draw_line({
+            "Displaying",
+            {color="green", next_text},
+            "and",
+            {color="green", prev_text}
+        })
 
         if q_setting_get(SETTING_REAL) then
+            self:print_shift_map()--[[
             for _, matpair in ipairs(self:get_shift_map()) do
-                -- Don't localize the material; shifting affects that
                 local from_str, to_str = matpair[1], matpair[2]
                 self._fb:draw_line({
                     {color="green", from_str},
                     "became",
                     {color="green", to_str}
                 })
-            end
+            end]]
         end
 
-        self._fb:configure("color", q_setting_get(SETTING_COLOR))
-        self._fb:configure("images", q_setting_get(SETTING_IMAGES))
-        self._fb:configure("debug", q_logging())
         self._fb:draw_box()
     end,
 
@@ -434,6 +461,16 @@ imgui = nil
 query = nil
 
 -- function OnWorldInitialized() end
+
+--[[ Load the material table.
+--
+-- Because fungal shifts change the value returned by
+-- CellFactory_GetUIName(), we need to cache these values after the
+-- cell factory is initialized but before the world state (and thus the
+-- shift log) is loaded ]]
+function OnBiomeConfigLoaded()
+    MatLib:init()
+end
 
 function OnModPostInit()
     if load_imgui then
