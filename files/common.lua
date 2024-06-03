@@ -6,6 +6,13 @@
 --
 -- TODO:
 --
+-- Localization improvements for other languages:
+--  "flask" -> "$inventory_actiontype_material" (en="Material")
+--  "prev" and "next"
+--  "Enable" and "Disable"
+--  "Show" and "Hide"
+--  "shift", "shifts", "all", "zero", "one"
+--
 -- Move the setting stuff into a class and allow stuff like
 -- Config.previous_count.get()
 -- Config.previous_count.set(num)
@@ -213,18 +220,29 @@ end
 --[[ Format a material with the possibility of including a flask
 -- @param material string
 -- @param use_flask boolean
--- @return table
+-- @return FeedbackLine
 --]]
 function flask_or(mname, use_flask)
+    local terse = q_setting_get(SETTING_TERSE)
+    local line = {mname}
     if use_flask then
-        return {{color="cyan_light", "flask"}, {color="lightgray", "or"}, mname}
+        local s_flask = {
+            color="cyan_light",
+            image="data/ui_gfx/items/potion.png",
+            hover_text=GameTextGet("$item_potion"),
+        }
+        if not terse then
+            table.insert(s_flask, "flask")
+            table.insert(line, 1, {color="lightgray", "or"})
+        end
+        table.insert(line, 1, s_flask)
     end
-    return {mname}
+    return line
 end
 
 --[[ Format a fungal shift. Returns a pair of Feedback lines
 -- @param shift {from=table, to=table}
--- @return table, table
+-- @return FeedbackLine, FeedbackLine
 --]]
 function format_shift(shift)
     if not shift then return {"invalid shift", "invalid shift"} end
@@ -243,7 +261,8 @@ function format_shift(shift)
     end
     local m_target = {
         image=material_get_icon(target.material),
-        maybe_localize_material(target.material)
+        hover_text=localize_material_via(target.material, FORMAT_BOTH),
+        maybe_localize_material(target.material),
     }
     local s_source = {shift.from}
     local s_target = flask_or(m_target, target.flask)
@@ -251,15 +270,17 @@ function format_shift(shift)
     if want_expand == EXPAND_ONE and source.name_material then
         local mname = {
             image=material_get_icon(source.name_material),
-            maybe_localize_material(source.name_material)
+            hover_text=localize_material_via(source.name_material, FORMAT_BOTH),
+            maybe_localize_material(source.name_material),
         }
         s_source = flask_or(mname, source.flask)
     else
         local s_sources = {}
-        for _, mat in ipairs(source.materials) do
+        for _, material in ipairs(source.materials) do
             table.insert(s_sources, {
-                image=material_get_icon(mat),
-                maybe_localize_material(mat)
+                image=material_get_icon(material),
+                hover_text=localize_material_via(material, FORMAT_BOTH),
+                maybe_localize_material(material),
             })
         end
         s_source = flask_or(s_sources, source.flask)
@@ -278,7 +299,7 @@ end
 --[[ Possibly format text with a given color
 -- @param text string
 -- @param color table|string|nil
--- @return table
+-- @return FeedbackLine
 --]]
 function format_color(text, color)
     if color then
@@ -291,7 +312,7 @@ end
 -- @param curr number
 -- @param index number
 -- @param colors table|nil
--- @return table
+-- @return FeedbackLine
 --]]
 function format_relative(curr, index, colors)
     local color = colors or {}
@@ -314,7 +335,7 @@ function format_relative(curr, index, colors)
     end
     local result = format_color(term, term_color)
     if q_logging() then
-        result[#result] = result[#result] .. ("[i=%s]"):format(index) 
+        table.insert(result, ("[index=%d]"):format(index))
     end
     return result
 end

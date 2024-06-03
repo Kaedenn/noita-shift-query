@@ -21,6 +21,8 @@
 -- Allow usage without Noita-Dear-ImGui using an alternate GUI library.
 -- Can use gusgui from https://github.com/ofoxsmith/gusgui
 --
+-- Support different languages for static text (see files/common.lua).
+--
 
 dofile_once("mods/shift_query/files/common.lua")
 dofile_once("mods/shift_query/files/query.lua")
@@ -80,27 +82,31 @@ SQ = {
             str_success = "(%d%%)"
         end
 
-        local result = maybe_localize_material(mat)
-        local mat1 = maybe_localize_material(combo[1])
-        local mat2 = maybe_localize_material(combo[2])
-        local mat3 = maybe_localize_material(combo[3])
-        local color = self.mat_colors[mat] or {1, 1, 1}
         self._fb:add({
-            {result, color=color, image=material_get_icon(mat)},
+            {
+                color=self.mat_colors[mat] or Feedback.colors.white,
+                image=material_get_icon(mat),
+                hover_text=localize_material_via(mat, FORMAT_BOTH),
+                maybe_localize_material(mat),
+            },
             str_success:format(prob)
         })
-        local msg1 = {mat1, image=material_get_icon(combo[1])}
-        local msg2 = {mat2, image=material_get_icon(combo[2])}
-        local msg3 = {mat3, image=material_get_icon(combo[3])}
+        local msgs = {}
+        for _, entry in ipairs(combo) do
+            table.insert(msgs, {
+                image=material_get_icon(entry),
+                hover_text=localize_material_via(entry, FORMAT_BOTH),
+                maybe_localize_material(entry),
+            })
+        end
         local mode = q_setting_get(SETTING_LOCALIZE)
-
         if mode == FORMAT_INTERNAL then
-            self._fb:add({"  ", msg1, msg2, msg3})
+            self._fb:add({"  ", msgs[1], msgs[2], msgs[3]})
         elseif mode == FORMAT_LOCALE then
-            self._fb:add({"  ", msg2, msg_in_presence, msg1, msg_and, msg3})
+            self._fb:add({"  ", msgs[2], msg_in_presence, msgs[1], msg_and, msgs[3]})
         else
-            self._fb:add({"  ", msg2, msg_in_presence})
-            self._fb:add({"  ", msg1, msg_and, msg3})
+            self._fb:add({"  ", msgs[2], msg_in_presence})
+            self._fb:add({"  ", msgs[1], msg_and, msgs[3]})
         end
     end,
 
@@ -162,6 +168,7 @@ SQ = {
                 local target_msg = {
                     color="yellow",
                     image=material_get_icon(shift.to.greedy_mat),
+                    hover_text=localize_material_via(shift.to.greedy_mat, FORMAT_BOTH),
                     maybe_localize_material(shift.to.greedy_mat),
                 }
                 line = {which_msg, gold_msg, msg_from, arrow_str, target_msg}
@@ -263,12 +270,14 @@ SQ = {
                 {
                     color="green",
                     image=material_get_icon(mat_from),
+                    hover_text=("%s [%s]"):format(from_loc_l, mat_from),
                     from_str,
                 },
                 "became",
                 {
                     color="green",
                     image=material_get_icon(mat_to),
+                    hover_text=("%s [%s]"):format(to_loc_l, mat_to),
                     to_str,
                 }
             })
@@ -429,15 +438,7 @@ SQ = {
         })
 
         if q_setting_get(SETTING_REAL) then
-            self:print_shift_map()--[[
-            for _, matpair in ipairs(self:get_shift_map()) do
-                local from_str, to_str = matpair[1], matpair[2]
-                self._fb:draw_line({
-                    {color="green", from_str},
-                    "became",
-                    {color="green", to_str}
-                })
-            end]]
+            self:print_shift_map()
         end
 
         self._fb:draw_box()

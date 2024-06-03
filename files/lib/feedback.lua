@@ -6,6 +6,7 @@
 --    fb:add("this is a string")
 --    fb:addf("this is a %s", "string")
 --    fb:add({"this text is red", color="red'})
+--    fb:add({"this text is red-ish", color={0.8, 0.2, 0.2}})
 --    fb:add({"this text has an image", image="data/materials_gfx/fungi.png"})
 --    fb:prependf("below are %d lines", fb:count())
 --    fb:draw()
@@ -18,11 +19,11 @@
 --    fb:clear()
 --        Clear all lines from the box
 --    fb:add(line)
---        Add a line below existing lines
+--        Add a line below existing lines; see below for format
 --    fb:addf(format_string, format_args...)
 --        Add a formatted line below existing lines
 --    fb:prepend(line)
---        Insert a line above existing lines
+--        Insert a line above existing lines; see below for format
 --    fb:prependf(format_string, format_args...)
 --        Insert a formatted line above existing lines
 --    count = fb:count()
@@ -44,9 +45,13 @@
 --    line[idx] = string                one or more words
 --    line.color = one of
 --        Feedback.colors.<name>        predefined color
+--        {r:num, g:num, b:num}         RGB color with values between [0,1]
 --        "name"                        name of predefined color
---        {number, number, number}      custom RGB color
---    line.image = string               optional image path
+--    line.image = string               optional image path drawn before text
+--    line.image_width = number         optional; forces width in pixels
+--    line.image_height = number        optional; forces height in pixels
+--    line.hover_text = string          text displayed if the image is hovered
+--    line.hover_wrap = number or 400   text wrap length; defaults to 400
 -- Lines can be nested recursively as so
 fb:add({
    {"This", color="red"},           -- red
@@ -126,6 +131,16 @@ Feedback = {
         self:prepend(line:format(...))
     end,
 
+    -- Add a debugging line at the end
+    debug = function(self, line)
+        self:add({debug=true, line})
+    end,
+
+    -- Add a formatted debugging line at the end
+    debugf = function(self, line, ...)
+        self:add({debug=true, line:format(...)})
+    end,
+
     -- Return the number of lines
     count = function(self)
         return #self.lines
@@ -149,43 +164,70 @@ Feedback = {
         end
         if type(color) == "table" then
             return {
-                color[1] or 0,
-                color[2] or 0,
-                color[3] or 0
+                color[1] or color.r or 0,
+                color[2] or color.g or 0,
+                color[3] or color.b or 0,
             }
         end
     end,
 
     -- Draw a single line; public for convenience
     draw_line = function(self, line)
+        local imgui = self._imgui
         if type(line) == "string" then
-            self._imgui.Text(line)
+            imgui.Text(line)
         elseif type(line) == "table" then
-            local color = self:get_color(line.color)
-            if color and self._config.color then
-                self._imgui.PushStyleColor(self._imgui.Col.Text, unpack(color))
-            end
-            if line.image and self._config.images then
-                local img = self._imgui.LoadImage(line.image)
-                if img then
-                    self._imgui.Image(img, img.width, img.height)
-                    self._imgui.SameLine()
+            if not line.debug or self._config.debug then
+                local color = self:get_color(line.color)
+                if color and self._config.color then
+                    imgui.PushStyleColor(imgui.Col.Text, unpack(color))
+                end
+                if line.image and self._config.images then
+                    local img = imgui.LoadImage(line.image)
+                    if img then
+                        local width = line.image_width or img.width
+                        local height = line.image_height or img.height
+                        imgui.Image(img, width, height)
+                        if line.hover_text and imgui.IsItemHovered() then
+                            local wrap = line.hover_wrap or 400
+                            if imgui.BeginTooltip() then
+                                imgui.PushTextWrapPos(wrap)
+                                imgui.Text(line.hover_text)
+                                imgui.PopTextWrapPos()
+                                imgui.EndTooltip()
+                            end
+                        end
+                        imgui.SameLine()
+                    end
+                end
+                for idx, part in ipairs(line) do
+                    if idx > 1 then imgui.SameLine() end
+                    self:draw_line(part)
+                end
+                if color and self._config.color then
+                    imgui.PopStyleColor()
                 end
             end
-            for idx, part in ipairs(line) do
-                if idx > 1 then self._imgui.SameLine() end
-                self:draw_line(part)
-            end
-            if color and self._config.color then
-                self._imgui.PopStyleColor()
-            end
         elseif line ~= nil then
-            self._imgui.Text(tostring(line))
+            imgui.Text(tostring(line))
         end
     end,
 
     -- Draw the box of text
     draw_box = function(self)
+        if self._config.debug then
+            self:draw_line({
+                {color="red", "Red"},
+                {color="green", "Green"},
+                {color="blue", "Blue"},
+                {
+                    image="data/ui_gfx/items/moon.png",
+                    hover_text="This is a moon",
+                    color="lightblue",
+                    "$item_moon",
+                }
+            })
+        end
         for _, line in ipairs(self.lines) do
             self:draw_line(line)
         end
