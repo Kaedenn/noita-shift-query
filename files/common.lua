@@ -52,6 +52,11 @@ function q_is_update_forced()
     return GlobalsGetValue(K_CONFIG_FORCE_UPDATE, FLAG_OFF) ~= FLAG_OFF
 end
 
+--[[ Print a message to the logger.txt (if logging is enabled via magic) ]]
+function q_write_log(message, ...)
+    print(("[%s] %s"):format(MOD_ID, message:format(...)))
+end
+
 --[[ Print a message to both the game and to the console ]]
 function q_print(msg)
     GamePrint(msg)

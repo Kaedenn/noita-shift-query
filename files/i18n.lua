@@ -1,4 +1,17 @@
---[[ Standalone reimplementation of GameTextGet ]]
+--[[
+-- Standalone reimplementation of GameTextGet.
+--
+-- This provides consistent translation lookups even if display strings change,
+-- such as with fungal shifts.
+--
+-- Usage:
+--
+-- I18N = dofile("mods/mymod/files/i18n.lua")
+-- function OnBiomeConfigLoaded()
+--      I18N:init()
+--      print(I18N:get("animal_lukki"))
+-- end
+--]]
 
 I18N = {
     entries = {},
@@ -28,6 +41,7 @@ local function split_csv(line)
     return cols
 end
 
+--[[ Initialize the language table. Call this in OnBiomeConfigLoaded ]]
 function I18N:init()
     local text = ModTextFileGetContent("data/translations/common.csv")
     local lines = {}
@@ -44,7 +58,6 @@ function I18N:init()
         table.insert(lines, split_csv(line))
     end
 
-    local lang = "en"
     local lang_name = GameTextGet("$current_language")
     for colidx, entry in ipairs(by_key["current_language"]) do
         if entry == lang_name then
@@ -58,16 +71,36 @@ function I18N:init()
     self.by_key = by_key
 
     local lang_have = self:get("current_language")
-    local lang_want = GameTextGet("$current_language")
-    assert(lang_have == lang_want, ("current_language %q not %q"):format(lang_have, lang_want))
+    assert(lang_have == lang_name, ("current_language %q not %q"):format(lang_have, lang_name))
+
+    q_write_log(("locale=%q, lang=%q, lang_id=%d"):format(self.locale, lang_have, self.lang_id))
 end
 
+--[[
+-- Obtain the value of the given key.
+--
+-- If the key isn't found, then this function returns the default argument, if
+-- given. If the default argument isn't specified, then this function falls
+-- back to GameTextGet.
+--]]
 function I18N:get(key, default)
     local row = self.by_key[key:gsub("^%$", "")]
     if not row or #row < self.lang_id then
+        if not default then
+            return self:get_fallback(key)
+        end
         return default
     end
     return row[self.lang_id]
+end
+
+--[[ We failed to get the value; try GameTextGet ]]
+function I18N:get_fallback(key)
+    local term = key
+    if not term:find("/^%$/") then
+        term = "$" .. term
+    end
+    return GameTextGet(term)
 end
 
 return I18N
