@@ -162,7 +162,16 @@ SQ = {
             if show_greed then
                 local gold_msg = {
                     color="lightgray",
-                    image=material_get_icon("gold"),
+                    {
+                        image=material_get_icon("gold"),
+                        hover_text=localize_material_via("gold", FORMAT_BOTH),
+                        color=RARE_MAT_COLOR,
+                    },
+                    {
+                        image=material_get_icon("grass_holy"),
+                        hover_text=localize_material_via("grass_holy", FORMAT_BOTH),
+                        color=RARE_MAT_COLOR,
+                    },
                     "greedy shift is"
                 }
                 local target_msg = {
@@ -175,6 +184,9 @@ SQ = {
                 if not terse then
                     table.insert(line, {
                         color="lightgray",
+                        hover_text=("When holding %s or %s"):format(
+                            maybe_localize_material("gold"),
+                            maybe_localize_material("grass_holy")),
                         "when holding a pouch of gold"
                     })
                 end

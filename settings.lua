@@ -17,7 +17,7 @@ dofile_once("data/scripts/lib/utilities.lua")
 dofile_once("data/scripts/lib/mod_settings.lua")
 MOD_ID = "shift_query"
 MIN_SHIFTS = -1
-MAX_SHIFTS = 20
+MAX_SHIFTS = 20 -- TODO: Make configurable
 
 function sq_mod_shift_range(mod_id, gui, in_main_menu, im_id, setting)
     -- luacheck: globals ModSettingGetNextValue ModSettingSetNextValue
@@ -25,7 +25,7 @@ function sq_mod_shift_range(mod_id, gui, in_main_menu, im_id, setting)
     -- luacheck: globals mod_setting_handle_change_callback
     -- luacheck: globals mod_setting_tooltip mod_setting_get_id
     local value = ModSettingGetNextValue(mod_setting_get_id(mod_id, setting))
-    if type(value) ~= "number" then value = setting.default or 0 end
+    if type(value) ~= "number" then value = setting.value_default or 0 end
     
     local value_new = GuiSlider(
         gui, im_id,
@@ -37,7 +37,6 @@ function sq_mod_shift_range(mod_id, gui, in_main_menu, im_id, setting)
         setting.value_default,
         setting.value_display_multiplier or 1,
         setting.value_display_formatting or "", 64)
-    --value_new = clamp(math.floor(value_new), MIN_SHIFTS, MAX_SHIFTS)
     value_new = math.floor(value_new)
     if value ~= value_new then
         ModSettingSetNextValue(mod_setting_get_id(mod_id, setting), value_new, false)

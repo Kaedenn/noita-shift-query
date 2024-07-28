@@ -48,10 +48,12 @@
 --        {r:num, g:num, b:num}         RGB color with values between [0,1]
 --        "name"                        name of predefined color
 --    line.image = string               optional image path drawn before text
+--    line.fallback_image = string      image to draw if line.image fails
 --    line.image_width = number         optional; forces width in pixels
 --    line.image_height = number        optional; forces height in pixels
---    line.hover_text = string          text displayed if the image is hovered
+--    line.hover_text = string          text displayed if the line is hovered
 --    line.hover_wrap = number or 400   text wrap length; defaults to 400
+--    line.wrap = number                if given, text will be wrapped
 -- Lines can be nested recursively as so
 fb:add({
    {"This", color="red"},           -- red
@@ -81,12 +83,19 @@ Feedback = {
 
         -- Blended colors
         red_light = {1, 0.5, 0.5},
+        lightred = {1, 0.5, 0.5},
         green_light = {0.5, 1, 0.5},
+        lightgreen = {0.5, 1, 0.5},
         blue_light = {0.5, 0.5, 1},
+        lightblue = {0.5, 0.5, 1},
         cyan_light = {0.5, 1, 1},
+        lightcyan = {0.5, 1, 1},
         magenta_light = {1, 0.5, 1},
+        lightmagenta = {1, 0.5, 1},
         yellow_light = {1, 1, 0.5},
+        lightyellow = {1, 1, 0.5},
         gray = {0.5, 0.5, 0.5},
+        gray_light = {0.75, 0.75, 0.75},
         lightgray = {0.75, 0.75, 0.75},
     },
 
@@ -172,10 +181,29 @@ Feedback = {
     end,
 
     -- Draw a single line; public for convenience
-    draw_line = function(self, line)
+    draw_line = function(self, line, parent)
         local imgui = self._imgui
         if type(line) == "string" then
+            if parent and parent.wrap then
+                imgui.PushTextWrapPos(parent.wrap)
+            end
             imgui.Text(line)
+            if parent and parent.wrap then
+                imgui.PopTextWrapPos()
+            end
+            if parent and parent.hover_text and imgui.IsItemHovered() then
+                local wrap = parent.hover_wrap or 400
+                if imgui.BeginTooltip() then
+                    imgui.PushTextWrapPos(wrap)
+                    if type(parent.hover_text) == "string" then
+                        imgui.Text(parent.hover_text)
+                    elseif type(parent.hover_text) == "table" then
+                        self:draw_line(parent.hover_text, parent)
+                    end
+                    imgui.PopTextWrapPos()
+                    imgui.EndTooltip()
+                end
+            end
         elseif type(line) == "table" then
             if not line.debug or self._config.debug then
                 local color = self:get_color(line.color)
@@ -184,6 +212,9 @@ Feedback = {
                 end
                 if line.image and self._config.images then
                     local img = imgui.LoadImage(line.image)
+                    if not img and line.fallback_image then
+                        img = imgui.LoadImage(line.fallback_image)
+                    end
                     if img then
                         local width = line.image_width or img.width
                         local height = line.image_height or img.height
@@ -192,7 +223,11 @@ Feedback = {
                             local wrap = line.hover_wrap or 400
                             if imgui.BeginTooltip() then
                                 imgui.PushTextWrapPos(wrap)
-                                imgui.Text(line.hover_text)
+                                if type(line.hover_text) == "string" then
+                                    imgui.Text(line.hover_text)
+                                elseif type(line.hover_text) == "table" then
+                                    self:draw_line(line.hover_text, line)
+                                end
                                 imgui.PopTextWrapPos()
                                 imgui.EndTooltip()
                             end
@@ -202,7 +237,7 @@ Feedback = {
                 end
                 for idx, part in ipairs(line) do
                     if idx > 1 then imgui.SameLine() end
-                    self:draw_line(part)
+                    self:draw_line(part, line)
                 end
                 if color and self._config.color then
                     imgui.PopStyleColor()
