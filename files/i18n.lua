@@ -58,7 +58,7 @@ function I18N:init()
         table.insert(lines, split_csv(line))
     end
 
-    local lang_name = GameTextGet("$current_language")
+    local lang_name = GameTextGet and GameTextGet("$current_language") or "English"
     for colidx, entry in ipairs(by_key["current_language"]) do
         if entry == lang_name then
             self.lang_id = colidx

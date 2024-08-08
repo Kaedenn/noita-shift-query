@@ -205,6 +205,9 @@ Feedback = {
                 end
             end
         elseif type(line) == "table" then
+            if line.clear then
+                imgui.NewLine()
+            end
             if not line.debug or self._config.debug then
                 local color = self:get_color(line.color)
                 if color and self._config.color then

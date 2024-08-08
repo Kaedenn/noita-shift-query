@@ -273,9 +273,17 @@ function format_shift(shift)
     local s_target = flask_or(m_target, target.flask)
     local want_expand = q_setting_get(SETTING_EXPAND)
     if want_expand == EXPAND_ONE and source.name_material then
+        local hover_all = {"Materials included in this shift:"}
+        for _, material in ipairs(source.materials) do
+            table.insert(hover_all, {
+                clear=true,
+                image=material_get_icon(material),
+                localize_material_via(material, FORMAT_BOTH)
+            })
+        end
         local mname = {
             image=material_get_icon(source.name_material),
-            hover_text=localize_material_via(source.name_material, FORMAT_BOTH),
+            hover_text=hover_all,
             maybe_localize_material(source.name_material),
         }
         s_source = flask_or(mname, source.flask)

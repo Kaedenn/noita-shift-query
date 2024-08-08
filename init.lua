@@ -525,7 +525,10 @@ function OnWorldPostUpdate()
         end
         if imgui.Begin(wtitle .. "###Main", nil, window_flags) then
             local res, ret = pcall(query.draw, query)
-            if not res then GamePrint(tostring(ret)) end
+            if not res then
+                GamePrint(tostring(ret))
+                print_error(tostring(ret))
+            end
             imgui.End()
         end
     end
