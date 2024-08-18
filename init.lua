@@ -24,8 +24,6 @@
 -- Support different languages for static text (see files/common.lua).
 --
 
--- FIXME: 353335970 Shift 19 is Acid -> Acid
-
 dofile_once("mods/shift_query/files/common.lua")
 -- luacheck: globals q_get_enabled format_duration
 dofile_once("mods/shift_query/files/materials.lua")

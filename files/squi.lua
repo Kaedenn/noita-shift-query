@@ -2,6 +2,10 @@
 -- The Shift Query UI object
 --]]
 
+-- FIXME: 353335970 Shift 19 is Acid -> Acid
+-- TODO: Display all icons for multi-material shifts
+-- TODO: Draw material tags in hover
+
 dofile_once("mods/shift_query/files/common.lua")
 dofile_once("mods/shift_query/files/query.lua")
 dofile_once("mods/shift_query/files/lib/feedback.lua")
@@ -64,7 +68,8 @@ SQ = {
             {
                 color=self.mat_colors[mat] or Feedback.colors.white,
                 image=material_get_icon(mat),
-                hover_text=localize_material_via(mat, FORMAT_BOTH),
+                hover_text=get_hover_for(mat),
+                hover_wrap=HOVER_WRAP,
                 maybe_localize_material(mat),
             },
             str_success:format(prob)
@@ -73,7 +78,8 @@ SQ = {
         for _, entry in ipairs(combo) do
             table.insert(msgs, {
                 image=material_get_icon(entry),
-                hover_text=localize_material_via(entry, FORMAT_BOTH),
+                hover_text=get_hover_for(entry),
+                hover_wrap=HOVER_WRAP,
                 maybe_localize_material(entry),
             })
         end
@@ -142,12 +148,14 @@ SQ = {
                     color="lightgray",
                     {
                         image=material_get_icon("gold"),
-                        hover_text=localize_material_via("gold", FORMAT_BOTH),
+                        hover_text=get_hover_for("gold"),
+                        hover_wrap=HOVER_WRAP,
                         color=RARE_MAT_COLOR,
                     },
                     {
                         image=material_get_icon("grass_holy"),
-                        hover_text=localize_material_via("grass_holy", FORMAT_BOTH),
+                        hover_text=get_hover_for("grass_holy"),
+                        hover_wrap=HOVER_WRAP,
                         color=RARE_MAT_COLOR,
                     },
                     "greedy shift is"
@@ -155,7 +163,8 @@ SQ = {
                 local target_msg = {
                     color="yellow",
                     image=material_get_icon(shift.to.greedy_mat),
-                    hover_text=localize_material_via(shift.to.greedy_mat, FORMAT_BOTH),
+                    hover_text=get_hover_for(shift.to.greedy_mat),
+                    hover_wrap=HOVER_WRAP,
                     maybe_localize_material(shift.to.greedy_mat),
                 }
                 line = {which_msg, gold_msg, msg_from, arrow_str, target_msg}
@@ -165,6 +174,7 @@ SQ = {
                         hover_text=("When holding %s or %s"):format(
                             maybe_localize_material("gold"),
                             maybe_localize_material("grass_holy")),
+                        hover_wrap=HOVER_WRAP,
                         "when holding a pouch of gold"
                     })
                 end
@@ -260,14 +270,16 @@ SQ = {
                 {
                     color="green",
                     image=material_get_icon(mat_from),
-                    hover_text=("%s [%s]"):format(from_loc_l, mat_from),
+                    hover_text=get_hover_for(mat_from),
+                    hover_wrap=HOVER_WRAP,
                     from_str,
                 },
                 "became",
                 {
                     color="green",
                     image=material_get_icon(mat_to),
-                    hover_text=("%s [%s]"):format(to_loc_l, mat_to),
+                    hover_text=get_hover_for(mat_to),
+                    hover_wrap=HOVER_WRAP,
                     to_str,
                 }
             })

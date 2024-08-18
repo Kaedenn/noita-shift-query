@@ -10,6 +10,8 @@ CUTOFF_RARE = 0.2   -- shifts with this probability or lower are "rare"
 FLAG_ON = "1"       -- GlobalsSetValue/GlobalsGetValue "true"
 FLAG_OFF = "0"      -- GlobalsSetValue/GlobalsGetValue "false"
 
+HOVER_WRAP = 600
+
 --[[ The two secret materials ]]
 MAT_AP = "midas_precursor"
 MAT_LC = "magic_liquid_hp_regeneration_unstable"

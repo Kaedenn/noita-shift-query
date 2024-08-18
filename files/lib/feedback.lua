@@ -199,6 +199,8 @@ Feedback = {
                         imgui.Text(parent.hover_text)
                     elseif type(parent.hover_text) == "table" then
                         self:draw_line(parent.hover_text, parent)
+                    elseif type(parent.hover_text) == "function" then
+                        parent.hover_text(parent, imgui)
                     end
                     imgui.PopTextWrapPos()
                     imgui.EndTooltip()
@@ -230,6 +232,8 @@ Feedback = {
                                     imgui.Text(line.hover_text)
                                 elseif type(line.hover_text) == "table" then
                                     self:draw_line(line.hover_text, line)
+                                elseif type(line.hover_text) == "function" then
+                                    line.hover_text(line, imgui)
                                 end
                                 imgui.PopTextWrapPos()
                                 imgui.EndTooltip()

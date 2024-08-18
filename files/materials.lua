@@ -31,7 +31,9 @@ function MatLib:init()
             local entry = {
                 id = matid,
                 name = mat,
-                uiname = CellFactory_GetUIName(matid)
+                uiname = CellFactory_GetUIName(matid),
+                local_name = nil, -- populated below
+                tags = CellFactory_GetTags(matid),
             }
             entry.local_name = I18N:get(entry.uiname, entry.name)
             self.materials.by_name[mat] = entry

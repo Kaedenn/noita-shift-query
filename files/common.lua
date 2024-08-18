@@ -234,7 +234,9 @@ function flask_or(mname, use_flask)
         local s_flask = {
             color="cyan_light",
             image="data/ui_gfx/items/potion.png",
-            hover_text=GameTextGet("$item_potion"),
+            hover_text=("%s or %s"):format(
+                GameTextGet("$item_potion"),
+                GameTextGet("$item_powder_stash_3"))
         }
         if not terse then
             table.insert(s_flask, "flask")
@@ -266,7 +268,8 @@ function format_shift(shift)
     end
     local m_target = {
         image=material_get_icon(target.material),
-        hover_text=localize_material_via(target.material, FORMAT_BOTH),
+        hover_text=get_hover_for(target.material),
+        hover_wrap=HOVER_WRAP,
         maybe_localize_material(target.material),
     }
     local s_source = {shift.from}
@@ -274,31 +277,54 @@ function format_shift(shift)
     local want_expand = q_setting_get(SETTING_EXPAND)
     if want_expand == EXPAND_ONE and source.name_material then
         local hover_all = {"Materials included in this shift:"}
+        local locname = maybe_localize_material(source.name_material)
+        local mname = {}
         for _, material in ipairs(source.materials) do
             table.insert(hover_all, {
                 clear=true,
                 image=material_get_icon(material),
                 localize_material_via(material, FORMAT_BOTH)
             })
+            --[[ FIXME: This gets too noisy
+            table.insert(mname, {
+                image=material_get_icon(material),
+                hover_text=get_hover_for(material),
+                hover_wrap=HOVER_WRAP,
+            })]]
         end
-        local mname = {
+        table.insert(mname, {
             image=material_get_icon(source.name_material),
             hover_text=hover_all,
+            hover_wrap=HOVER_WRAP,
             maybe_localize_material(source.name_material),
-        }
+        })
+
         s_source = flask_or(mname, source.flask)
     else
         local s_sources = {}
         for _, material in ipairs(source.materials) do
             table.insert(s_sources, {
                 image=material_get_icon(material),
-                hover_text=localize_material_via(material, FORMAT_BOTH),
+                hover_text=get_hover_for(material),
+                hover_wrap=HOVER_WRAP,
                 maybe_localize_material(material),
             })
         end
         s_source = flask_or(s_sources, source.flask)
     end
     return s_source, s_target
+end
+
+--[[ Create a hover function for the given material name ]]
+function get_hover_for(matname)
+    return function(line, imgui)
+        imgui.Text(localize_material_via(matname, FORMAT_BOTH))
+        local minfo = MatLib:get(matname) or {}
+        local mtags = table.concat(minfo.tags or {}, " ")
+        if mtags ~= "" then
+            imgui.Text("Tags: " .. mtags)
+        end
+    end
 end
 
 --[[ Get the (probable) path to the material icon
