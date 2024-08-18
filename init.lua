@@ -27,12 +27,13 @@
 -- FIXME: 353335970 Shift 19 is Acid -> Acid
 
 dofile_once("mods/shift_query/files/common.lua")
+-- luacheck: globals q_get_enabled format_duration
+dofile_once("mods/shift_query/files/materials.lua")
+-- luacheck: globals MatLib
 dofile_once("mods/shift_query/files/query.lua")
-dofile_once("mods/shift_query/files/lib/feedback.lua")
-dofile_once("mods/shift_query/files/constants.lua")
+-- luacheck: globals get_last_shift_frame get_cooldown_sec
 dofile_once("mods/shift_query/files/squi.lua")
-smallfolk = dofile_once("mods/shift_query/files/lib/smallfolk.lua")
-APLC = dofile_once("mods/shift_query/files/aplc.lua")
+-- luacheck: globals SQ
 
 imgui = nil
 query = nil
