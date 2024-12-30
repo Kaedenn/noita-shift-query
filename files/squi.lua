@@ -324,10 +324,16 @@ SQ = {
                 end
                 imgui.Separator()
 
+                local seed = tonumber(StatsGetValue("world_seed"))
                 if imgui.MenuItem("Copy World Seed") then
-                    local seed = tonumber(StatsGetValue("world_seed"))
                     imgui.SetClipboardText(seed)
                     GamePrint(("World Seed %s copied to the clipboard"):format(seed))
+                end
+
+                if imgui.MenuItem("Copy Noitool URL") then
+                    local url = ("https://noitool.com?seed=%s"):format(seed)
+                    imgui.SetClipboardText(url)
+                    GamePrint(("Noitool URL %s copied to the clipboard"):format(url))
                 end
                 imgui.EndMenu()
             end

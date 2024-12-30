@@ -48,7 +48,7 @@ end
 
 function OnModPostInit()
     if load_imgui then
-        imgui = load_imgui({version="1.4.0", mod="FungalShiftQuery"})
+        imgui = load_imgui({version="1.17.0", mod="FungalShiftQuery"})
         query = SQ:new(imgui)
     end
 end
